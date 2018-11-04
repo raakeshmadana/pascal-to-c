@@ -2,6 +2,8 @@
 #include <stdio.h>
 #include <stdlib.h>
 
+#include "pascal.h"
+
 extern int yylex();
 extern int yyparse();
 void yyerror(char const *);
