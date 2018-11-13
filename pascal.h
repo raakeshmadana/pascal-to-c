@@ -16,6 +16,19 @@ typedef struct Expression Expression;
 typedef struct SimpleExpression SimpleExpression;
 typedef struct Term Term;
 typedef struct Factor Factor;
+typedef struct Function Function;
+typedef struct Procedure Procedure;
+typedef struct Assignment Assignment;
+typedef struct IfThen IfThen;
+typedef struct WhileDo WhileDo;
+typedef struct ForTo ForTo;
+typedef struct VariableExpression VariableExpression;
+typedef struct ProcStatementExpressionList ProcStatementExpressionList;
+typedef struct SignedTerm SignedTerm;
+typedef struct Addition Addition;
+typedef struct Multiplication Multiplication;
+typedef struct FactorExpressionList FactorExpressionList;
+typedef struct RelationalExpression RelationalExpression;
 
 struct Program {
 	char* identifier;
@@ -54,7 +67,7 @@ struct SubDeclarations {
 	SubDeclarations* next;
 };
 
-struct SubprogDeclarations {
+struct SubprogDeclaration {
 	SubprogramHead* subprogram_head;
 	Declarations* declarations;
 	StatementList* compound_statement;
@@ -63,12 +76,12 @@ struct SubprogDeclarations {
 struct SubprogramHead {
 	int node_type;
 	union {
-		struct {
+		struct Function {
 			char* identifier;
 			ParameterList* arguments;
 			int standard_type;
 		} *function;
-		struct {
+		struct Procedure {
 			char* identifier;
 			ParameterList* arguments;
 		} *procedure;
@@ -89,22 +102,22 @@ struct StatementList {
 struct Statement {
 	int node_type;
 	union {
-		struct {
+		struct Assignment {
 			Variable* variable;
 			Expression* expression;
 		} *assignment;
 		ProcStatement* proc_statement;
 		StatementList* compound_statement;
-		struct {
+		struct IfThen {
 			Expression* expression;
 			Statement* next;
 			Statement* else_clause;
 		} *if_then;
-		struct {
+		struct WhileDo {
 			Expression* expression;
 			Statement* next;
 		} *while_do;
-		struct {
+		struct ForTo {
 			char* identifier;
 			Expression* expression1;
 			Expression* expression2;
@@ -117,7 +130,7 @@ struct Variable {
 	int node_type;
 	union {
 		char* identifier;
-		struct {
+		struct VariableExpression {
 			char* identifier;
 			Expression* expression;
 		} *expression;
@@ -128,7 +141,7 @@ struct ProcStatement {
 	int node_type;
 	union {
 		char* identifier;
-		struct {
+		struct ProcStatementExpressionList {
 			char* identifier;
 			ExpressionList* expression_list;
 		} *expression_list;
@@ -144,7 +157,7 @@ struct Expression {
 	int node_type;
 	union {
 		SimpleExpression* simple_expression;
-		struct {
+		struct RelationalExpression {
 			SimpleExpression* simple_expression;
 			int relop;
 			Expression* next;
@@ -156,11 +169,11 @@ struct SimpleExpression {
 	int node_type;
 	union {
 		Term* term;
-		struct {
+		struct SignedTerm {
 			int sign;
 			Term* term;
 		} *signed_term;
-		struct {
+		struct Addition {
 			SimpleExpression* next;
 			int addop;
 			Term* term;
@@ -172,7 +185,7 @@ struct Term {
 	int node_type;
 	union {
 		Factor* factor;
-		struct {
+		struct Multiplication {
 			int mulop;
 			Factor* factor;
 			Term* next;
@@ -183,7 +196,7 @@ struct Term {
 struct Factor {
 	int node_type;
 	union {
-		struct {
+		struct FactorExpressionList {
 			char* identifier;
 			ExpressionList* expression_list;
 		} *expression_list;
