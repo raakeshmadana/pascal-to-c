@@ -7,6 +7,39 @@
 extern int yylex();
 extern int yyparse();
 void yyerror(char const *);
+
+void printTree(Program*);
+void printIdentifierList(IdentifierList*);
+void printDeclarations(Declarations*);
+void printType(Type*);
+void printArrayType(ArrayType*);
+void printSubDeclarations(SubDeclarations*);
+void printSubprogDeclaration(SubprogDeclaration*);
+void printSubprogramHead(SubprogramHead*);
+void printFunction(Function*);
+void printProcedure(Procedure*);
+void printParameterList(ParameterList*);
+void printStatementList(StatementList*);
+void printCompoundStatement(StatementList*);
+void printStatement(Statement*);
+void printAssignment(Assignment*);
+void printIfThen(IfThen*);
+void printWhileDo(WhileDo*);
+void printForTo(ForTo*);
+void printVariable(Variable*);
+void printVariableExpression(VariableExpression*);
+void printProcStatement(ProcStatement*);
+void printProcStatementExpressionList(ProcStatementExpressionList*);
+void printExpressionList(ExpressionList*);
+void printExpression(Expression*);
+void printRelationalExpression(RelationalExpression*);
+void printSimpleExpression(SimpleExpression*);
+void printSignedTerm(SignedTerm*);
+void printAddition(Addition*);
+void printTerm(Term*);
+void printMultiplication(Multiplication*);
+void printFactor(Factor*);
+void printFactorExpressionList(FactorExpressionList*);
 %}
 
 %union {
@@ -86,25 +119,23 @@ void yyerror(char const *);
 
 %%
 program: PROGRAM IDENTIFIER SEMICOLON declarations subdeclarations compoundstatement DOT { 
-			printf("program\n");
 			Program* program = (Program*)malloc(sizeof(Program));
 			program->identifier = $2;
 			program->declarations = $4;
 			program->sub_declarations = $5;
 			program->compound_statement = $6;
 			$$ = program;
+			printTree(program);
 		}
 ;
 
 identifierlist: IDENTIFIER {
-					printf("identifierlist-1\n");
 					IdentifierList* identifier_list = (IdentifierList*)malloc(sizeof(identifier_list));
 					identifier_list->identifier = $1;
 					identifier_list->next = NULL;
 					$$ = identifier_list;
 				}
 			  | identifierlist COMMA IDENTIFIER {
-					printf("identifierlist-2\n");
 					IdentifierList* identifier_list = (IdentifierList*)malloc(sizeof(identifier_list));
 					identifier_list->identifier = $3;
 					identifier_list->next = $1;
@@ -112,9 +143,8 @@ identifierlist: IDENTIFIER {
 				}
 ;
 
-declarations: %empty { $$ = NULL; printf("declarations-1\n"); }
+declarations: %empty { $$ = NULL; }
 			| declarations VAR identifierlist COLON type SEMICOLON {
-					printf("declarations-2\n");
 					Declarations* declarations = (Declarations*)malloc(sizeof(Declarations));
 					declarations->identifier_list = $3;
 					declarations->type = $5;
@@ -124,14 +154,12 @@ declarations: %empty { $$ = NULL; printf("declarations-1\n"); }
 ;
 
 type: standardtype {
-			printf("type-1\n");
 			Type* type = (Type*)malloc(sizeof(Type));
 			type->node_type = 0;
 			type->type.standard_type = $1;
 			$$ = type;
 		}
 	| arraytype {
-			printf("type-2\n");
 			Type* type = (Type*)malloc(sizeof(Type));
 			type->node_type = 1;
 			type->type.array_type = $1;
@@ -139,12 +167,11 @@ type: standardtype {
 		}
 ;
 
-standardtype: INTEGER { $$ = $1; printf("standardtype-1\n"); }
-			| REAL { $$ = $1; printf("standardtype-2\n"); }
+standardtype: INTEGER { $$ = $1; }
+			| REAL { $$ = $1; }
 ;
 
 arraytype: ARRAY LSQUARE INTNUM DOUBLEDOT INTNUM RSQUARE OF standardtype {
-				printf("arraytype\n");
 				ArrayType* array_type =	(ArrayType*)malloc(sizeof(ArrayType));
 				array_type->from = $3;
 				array_type->to = $5;
@@ -153,9 +180,8 @@ arraytype: ARRAY LSQUARE INTNUM DOUBLEDOT INTNUM RSQUARE OF standardtype {
 			}
 ;
 
-subdeclarations: %empty { $$ = NULL; printf("subdeclarations-1\n"); }
+subdeclarations: %empty { $$ = NULL; }
 			   | subprogdeclaration subdeclarations {
-						printf("subdeclarations-2\n");
 						SubDeclarations* sub_declarations = (SubDeclarations*)malloc(sizeof(SubDeclarations));
 						sub_declarations->subprog_declaration = $1;
 						sub_declarations->next = $2;
@@ -164,7 +190,6 @@ subdeclarations: %empty { $$ = NULL; printf("subdeclarations-1\n"); }
 ;
 
 subprogdeclaration: subprogramhead declarations compoundstatement {
-							printf("subprogdeclarations\n");
 							SubprogDeclaration* subprog_declaration = (SubprogDeclaration*)malloc(sizeof(SubprogDeclaration));
 							subprog_declaration->subprogram_head = $1;
 							subprog_declaration->declarations = $2;
@@ -174,7 +199,6 @@ subprogdeclaration: subprogramhead declarations compoundstatement {
 ;
 
 subprogramhead: FUNCTION IDENTIFIER arguments COLON standardtype SEMICOLON {
-						printf("subprogramhead-1\n");
 						SubprogramHead* subprogram_head = (SubprogramHead*)malloc(sizeof(SubprogramHead));
 						subprogram_head->node_type = 0;
 						subprogram_head->subprogram_head.function = (Function*)malloc(sizeof(Function));
@@ -184,7 +208,6 @@ subprogramhead: FUNCTION IDENTIFIER arguments COLON standardtype SEMICOLON {
 						$$ = subprogram_head;
 					}
 			  | PROCEDURE IDENTIFIER arguments SEMICOLON {
-						printf("subprogramhead-2\n");
 						SubprogramHead* subprogram_head = (SubprogramHead*)malloc(sizeof(SubprogramHead));
 						subprogram_head->node_type = 1;
 						subprogram_head->subprogram_head.procedure = (Procedure*)malloc(sizeof(Procedure));
@@ -194,12 +217,11 @@ subprogramhead: FUNCTION IDENTIFIER arguments COLON standardtype SEMICOLON {
 					}
 ;
 
-arguments: %empty { $$ = NULL; printf("arguments-1\n"); }
-		 | LPAREN parameterlist RPAREN { $$ = $2; printf("arguments-2\n");}
+arguments: %empty { $$ = NULL; }
+		 | LPAREN parameterlist RPAREN { $$ = $2; }
 ;
 
 parameterlist: identifierlist COLON type {
-					printf("parameterlist-1\n");
 					ParameterList* parameter_list = (ParameterList*)malloc(sizeof(ParameterList));
 					parameter_list->identifier_list = $1;
 					parameter_list->type = $3;
@@ -207,7 +229,6 @@ parameterlist: identifierlist COLON type {
 					$$ = parameter_list;
 				}
 			 | parameterlist SEMICOLON identifierlist COLON type {
-					printf("parameterlist-2\n");
 					ParameterList* parameter_list = (ParameterList*)malloc(sizeof(ParameterList));
 					parameter_list->identifier_list = $3;
 					parameter_list->type = $5;
@@ -216,19 +237,17 @@ parameterlist: identifierlist COLON type {
 				}
 ;
 
-compoundstatement: BEG statementlist END { $$ = $2; printf("compoundstatement\n"); }
+compoundstatement: BEG statementlist END { $$ = $2; }
 ;
 
-statementlist: %empty { $$ = NULL; printf("statementlist-1\n"); }
+statementlist: %empty { $$ = NULL; }
 			 | statement {
-					printf("statementlist-2\n");
 					StatementList* statement_list = (StatementList*)malloc(sizeof(StatementList));
 					statement_list->statement = $1;
 					statement_list->next = NULL;
 					$$ = statement_list;
 				}
 			 | statement SEMICOLON statementlist {
-					printf("statementlist-3\n");
 					StatementList* statement_list = (StatementList*)malloc(sizeof(StatementList));
 					statement_list->statement = $1;
 					statement_list->next = $3;
@@ -237,7 +256,6 @@ statementlist: %empty { $$ = NULL; printf("statementlist-1\n"); }
 ;
 
 statement: variable ASSIGN expression {
-				printf("statement-1\n");
 				Statement* statement = (Statement*)malloc(sizeof(Statement));
 				statement->node_type = 0;
 				statement->statement.assignment = (Assignment*)malloc(sizeof(Assignment));
@@ -246,21 +264,18 @@ statement: variable ASSIGN expression {
 				$$ = statement;
 			}
 		 | procstatement {
-				printf("statement-2\n");
 				Statement* statement = (Statement*)malloc(sizeof(Statement));
 				statement->node_type = 1;
 				statement->statement.proc_statement = $1;
 				$$ = statement;
 			}
 		 | compoundstatement {
-				printf("statement-3\n");
 				Statement* statement = (Statement*)malloc(sizeof(Statement));
 				statement->node_type = 2;
 				statement->statement.compound_statement = $1;
 				$$ = statement;
 			}
 		 | IF expression THEN statement elseclause {
-				printf("if\n");
 				Statement* statement = (Statement*)malloc(sizeof(Statement));
 				statement->node_type = 3;
 				statement->statement.if_then = (IfThen*)malloc(sizeof(IfThen));
@@ -270,16 +285,16 @@ statement: variable ASSIGN expression {
 				$$ = statement;
 			}
 		 | WHILE expression DO statement {
-				printf("while\n");
 				Statement* statement = (Statement*)malloc(sizeof(Statement));
+				statement->node_type = 4;
 				statement->statement.while_do = (WhileDo*)malloc(sizeof(WhileDo));
 				statement->statement.while_do->expression = $2;
 				statement->statement.while_do->next = $4;
 				$$ = statement;
 			}
 		 | FOR IDENTIFIER ASSIGN expression TO expression DO statement {
-				printf("for\n");
 				Statement* statement = (Statement*)malloc(sizeof(Statement));
+				statement->node_type = 5;
 				statement->statement.for_to = (ForTo*)malloc(sizeof(ForTo));
 				statement->statement.for_to->identifier = $2;
 				statement->statement.for_to->expression1 = $4;
@@ -289,19 +304,17 @@ statement: variable ASSIGN expression {
 			}
 ;
 
-elseclause: %empty { $$ = NULL; printf("elseclause-1\n"); }
-		  | ELSE statement { $$ = $2; printf("elseclause-2\n"); }
+elseclause: %empty { $$ = NULL; }
+		  | ELSE statement { $$ = $2; }
 ;
 
 variable: IDENTIFIER {
-				printf("variable-1\n");
 				Variable* variable = (Variable*)malloc(sizeof(Variable));
 				variable->node_type = 0;
 				variable->variable.identifier = $1;
 				$$ = variable;
 			}
 		| IDENTIFIER LSQUARE expression RSQUARE {
-				printf("variable-2\n");
 				Variable* variable = (Variable*)malloc(sizeof(Variable));
 				variable->node_type = 1;
 				variable->variable.expression = (VariableExpression*)malloc(sizeof(VariableExpression));
@@ -312,14 +325,12 @@ variable: IDENTIFIER {
 ;
 
 procstatement: IDENTIFIER {
-					printf("procstatement-1\n");
 					ProcStatement* proc_statement = (ProcStatement*)malloc(sizeof(ProcStatement));
 					proc_statement->node_type = 0;
 					proc_statement->proc_statement.identifier = $1;
 					$$ = proc_statement;
 				}
 			 | IDENTIFIER LPAREN expressionlist RPAREN {
-					printf("procstatement-2\n");
 					ProcStatement* proc_statement = (ProcStatement*)malloc(sizeof(ProcStatement));
 					proc_statement->node_type = 1;
 					proc_statement->proc_statement.expression_list = (ProcStatementExpressionList*)malloc(sizeof(ProcStatementExpressionList));
@@ -330,32 +341,26 @@ procstatement: IDENTIFIER {
 ;
 
 expressionlist: expression {
-					printf("expressionlist-1\n");
 					ExpressionList* expression_list = (ExpressionList*)malloc(sizeof(ExpressionList));
 					expression_list->expression = $1;
 					expression_list->next = NULL;
 					$$ = expression_list;
 				}
 			  | expressionlist COMMA expression {
-					printf("expressionlist-2\n");
 					ExpressionList* expression_list = (ExpressionList*)malloc(sizeof(ExpressionList));
 					expression_list->expression = $3;
 					expression_list->next = $1;
 					$$ = expression_list;
-					/*$1->next = expression_list;
-					$$ = expression_list;*/
 				}
 ;
 
 expression: simpleexpression {
-				printf("expression-1\n");
 				Expression* expression = (Expression*)malloc(sizeof(Expression));
 				expression->node_type = 0;
 				expression->expression.simple_expression = $1;
 				$$ = expression;
 			}
 		  | simpleexpression relop expression {
-				printf("expression-2\n");
 				Expression* expression = (Expression*)malloc(sizeof(Expression));
 				expression->node_type = 1;
 				expression->expression.relation = (RelationalExpression*)malloc(sizeof(RelationalExpression));
@@ -366,23 +371,21 @@ expression: simpleexpression {
 			}
 ;
 
-relop: EQUALS { $$ = $1; printf("=\n"); }
-	 | NOTEQUALS { $$ = $1; printf("<>\n"); }
-	 | LESS { $$ = $1; printf("<\n"); }
-	 | LESSEQUALS { $$ = $1; printf("<=\n"); }
-	 | GREAT { $$ = $1; printf(">\n"); }
-	 | GREATEQUALS { $$ = $1; printf(">=\n"); }
+relop: EQUALS { $$ = $1; }
+	 | NOTEQUALS { $$ = $1; }
+	 | LESS { $$ = $1; }
+	 | LESSEQUALS { $$ = $1; }
+	 | GREAT { $$ = $1; }
+	 | GREATEQUALS { $$ = $1; }
 ;
 
 simpleexpression: term {
-						printf("simpleexpression-1\n");
 						SimpleExpression* simple_expression = (SimpleExpression*)malloc(sizeof(SimpleExpression));
 						simple_expression->node_type = 0;
 						simple_expression->simple_expression.term = $1;
 						$$ = simple_expression;
 					}
 				| sign term {
-						printf("simpleexpression-2\n");
 						SimpleExpression* simple_expression = (SimpleExpression*)malloc(sizeof(SimpleExpression));
 						simple_expression->node_type = 1;
 						simple_expression->simple_expression.signed_term = (SignedTerm*)malloc(sizeof(SignedTerm));
@@ -391,7 +394,6 @@ simpleexpression: term {
 						$$ = simple_expression;
 					}
 				| simpleexpression addop term {
-						printf("simpleexpression-3\n");
 						SimpleExpression* simple_expression = (SimpleExpression*)malloc(sizeof(SimpleExpression));
 						simple_expression->node_type = 2;
 						simple_expression->simple_expression.addition = (Addition*)malloc(sizeof(Addition));
@@ -402,20 +404,18 @@ simpleexpression: term {
 					}
 ;
 
-addop: PLUS { $$ = $1; printf("+\n"); }
-	 | MINUS { $$ = $1; printf("-\n"); }
-	 | OR { $$ = $1; printf("or\n"); }
+addop: PLUS { $$ = $1; }
+	 | MINUS { $$ = $1; }
+	 | OR { $$ = $1; }
 ;
 
 term: factor {
-			printf("term-1\n");
 			Term* term = (Term*)malloc(sizeof(Term));
 			term->node_type = 0;
 			term->term.factor = $1;
 			$$ = term;
 		}
 	| term mulop factor {
-			printf("term-2\n");
 			Term* term = (Term*)malloc(sizeof(Term));
 			term->node_type = 1;
 			term->term.multiplication = (Multiplication*)malloc(sizeof(Multiplication));
@@ -426,15 +426,14 @@ term: factor {
 		}
 ;
 
-mulop: ASTERISK { $$ = $1; printf("*\n"); }
-	 | SOLIDUS { $$ = $1; printf("/\n"); }
-	 | DIV { $$ = $1; printf("div\n"); }
-	 | MODULUS { $$ = $1; printf("modulus\n"); }
-	 | AND { $$ = $1; printf("and\n"); }
+mulop: ASTERISK { $$ = $1; }
+	 | SOLIDUS { $$ = $1; }
+	 | DIV { $$ = $1; }
+	 | MODULUS { $$ = $1; }
+	 | AND { $$ = $1; }
 ;
 
 factor: IDENTIFIER LPAREN expressionlist RPAREN {
-			printf("factor-1\n");
 			Factor* factor = (Factor*)malloc(sizeof(Factor));
 			factor->node_type = 0;
 			factor->factor.expression_list = (FactorExpressionList*)malloc(sizeof(FactorExpressionList));
@@ -443,35 +442,30 @@ factor: IDENTIFIER LPAREN expressionlist RPAREN {
 			$$ = factor;
 		}
 	  | variable {
-			printf("factor-2\n");
 			Factor* factor = (Factor*)malloc(sizeof(Factor));
 			factor->node_type = 1;
 			factor->factor.variable = $1;
 			$$ = factor;
 		}
 	  | INTNUM {
-			printf("factor-3\n");
 			Factor* factor = (Factor*)malloc(sizeof(Factor));
 			factor->node_type = 2;
 			factor->factor.integer = $1;
 			$$ = factor;
 		}
 	  | REALNUM {
-			printf("factor-4\n");
 			Factor* factor = (Factor*)malloc(sizeof(Factor));
 			factor->node_type = 3;
 			factor->factor.real = $1;
 			$$ = factor;
 		}
 	  | LPAREN expression RPAREN {
-			printf("factor-5\n");
 			Factor* factor = (Factor*)malloc(sizeof(Factor));
 			factor->node_type = 5;
 			factor->factor.expression = $2;
 			$$ = factor;
 		}
 	  | NOT factor {
-			printf("factor-6\n");
 			Factor* factor = (Factor*)malloc(sizeof(Factor));
 			factor->node_type = 6;
 			factor->factor.factor = $2;
@@ -479,8 +473,8 @@ factor: IDENTIFIER LPAREN expressionlist RPAREN {
 		}
 ;
 
-sign: PLUS { $$ = $1; printf("sign+\n"); }
-	| MINUS { $$ = $1; printf("sign-\n"); }
+sign: PLUS { $$ = $1; }
+	| MINUS { $$ = $1; }
 ;
 
 %%
@@ -491,4 +485,302 @@ int main() {
 
 void yyerror(char const *s) {
 	fprintf(stderr, "%s\n", s);
+}
+
+void printTree(Program* program) {
+	printf("%s\n", program->identifier);
+	printDeclarations(program->declarations);
+	printSubDeclarations(program->sub_declarations);
+	printCompoundStatement(program->compound_statement);
+}
+
+void printIdentifierList(IdentifierList* identifier_list) {
+	printf("IdentifierList\n");
+	while (identifier_list != NULL) {
+		printf("%s\n", identifier_list->identifier);
+		identifier_list = identifier_list->next;
+	}
+}
+void printDeclarations(Declarations* declarations) {
+	printf("Declarations\n");
+	while (declarations != NULL) {
+		printIdentifierList(declarations->identifier_list);
+		printType(declarations->type);
+		declarations = declarations->next;
+	}
+}
+
+void printType(Type* type) {
+	printf("Type\n");
+	switch (type->node_type) {
+		case 0:
+			printf("StandardType:%d\n", type->type.standard_type);
+			break;
+		case 1:
+			printArrayType(type->type.array_type);
+			break;
+	}
+}
+
+void printArrayType(ArrayType* array_type) {
+	printf("ArrayType\n");
+	printf("From:%d\n", array_type->from);
+	printf("To:%d\n", array_type->to);
+	printf("StandardType:%d\n", array_type->standard_type);
+	printf("Exiting ArrayType\n");
+}
+
+void printSubDeclarations(SubDeclarations* sub_declarations) {
+	printf("SubDeclarations\n");
+	while (sub_declarations != NULL) {
+		printSubprogDeclaration(sub_declarations->subprog_declaration);
+		sub_declarations = sub_declarations->next;
+	}
+}
+
+void printSubprogDeclaration(SubprogDeclaration* subprog_declaration) {
+	printf("SubprogDeclaration\n");
+	printSubprogramHead(subprog_declaration->subprogram_head);
+	printDeclarations(subprog_declaration->declarations);
+	printCompoundStatement(subprog_declaration->compound_statement);
+}
+
+void printSubprogramHead(SubprogramHead* subprogram_head) {
+	printf("SubprogramHead\n");
+	switch (subprogram_head->node_type) {
+		case 0:
+			printFunction(subprogram_head->subprogram_head.function);
+			break;
+		case 1:
+			printProcedure(subprogram_head->subprogram_head.procedure);
+			break;
+	}
+}
+
+void printFunction(Function* function) {
+	printf("Function\n");
+	printf("%s\n", function->identifier);
+	printParameterList(function->arguments);
+	printf("%d\n", function->standard_type);
+}
+
+void printProcedure(Procedure* procedure) {
+	printf("Procedure\n");
+	printf("%s\n", procedure->identifier);
+	printParameterList(procedure->arguments);
+}
+
+void printParameterList(ParameterList* parameter_list) {
+	printf("ParameterList\n");
+	while (parameter_list != NULL) {
+		printIdentifierList(parameter_list->identifier_list);
+		printType(parameter_list->type);
+		parameter_list = parameter_list->next;
+	}
+}
+
+void printStatementList(StatementList* statement_list) {
+	printf("StatementList\n");
+	while (statement_list != NULL) {
+		printStatement(statement_list->statement);
+		statement_list = statement_list->next;
+	}
+}
+
+void printCompoundStatement(StatementList* statement_list) {
+	printf("CompoundStatement\n");
+	while (statement_list != NULL) {
+		printStatement(statement_list->statement);
+		statement_list = statement_list->next;
+	}
+}
+
+void printStatement(Statement* statement) {
+	printf("Statement: %d\n", statement->node_type);
+	if (statement != NULL) {
+		switch (statement->node_type) {
+			case 0:
+				printAssignment(statement->statement.assignment);
+				break;
+			case 1:
+				printProcStatement(statement->statement.proc_statement);
+				break;
+			case 2:
+				printCompoundStatement(statement->statement.compound_statement);
+				break;
+			case 3:
+				printIfThen(statement->statement.if_then);
+				break;
+			case 4:
+				printWhileDo(statement->statement.while_do);
+				break;
+			case 5:
+				printForTo(statement->statement.for_to);
+				break;
+		}
+	}
+}
+
+void printAssignment(Assignment* assignment) {
+	printf("Assignment\n");
+	printVariable(assignment->variable);
+	printExpression(assignment->expression);
+}
+
+void printIfThen(IfThen* if_then) {
+	printf("IfThen\n");
+	printExpression(if_then->expression);
+	printStatement(if_then->next);
+	printStatement(if_then->else_clause);
+}
+
+void printWhileDo(WhileDo* while_do) {
+	printf("WhileDo\n");
+	printExpression(while_do->expression);
+	printStatement(while_do->next);
+}
+
+void printForTo(ForTo* for_to) {
+	printf("ForTo\n");
+	printf("%s\n", for_to->identifier);
+	printExpression(for_to->expression1);
+	printExpression(for_to->expression2);
+	printStatement(for_to->next);
+}
+
+void printVariable(Variable* variable) {
+	printf("Variable: %d\n", variable->node_type);
+	switch (variable->node_type) {
+		case 0:
+			printf("%s\n", variable->variable.identifier);
+			break;
+		case 1:
+			printVariableExpression(variable->variable.expression);
+			break;
+	}
+}
+
+void printVariableExpression(VariableExpression* expression) {
+	printf("VariableExpression\n");
+	printf("%s\n", expression->identifier);
+	printExpression(expression->expression);
+}
+
+void printProcStatement(ProcStatement* proc_statement) {
+	printf("ProcStatement\n");
+	switch (proc_statement->node_type) {
+		case 0:
+			printf("%s\n", proc_statement->proc_statement.identifier);
+		case 1:
+			printProcStatementExpressionList(proc_statement->proc_statement.expression_list);
+	}
+}
+
+void printProcStatementExpressionList(ProcStatementExpressionList* expression_list) {
+	printf("ProcStatementExpressionList\n");
+	printf("%s\n", expression_list->identifier);
+	printExpressionList(expression_list->expression_list);
+}
+
+void printExpressionList(ExpressionList* expression_list) {
+	printf("ExpressionList\n");
+	while (expression_list->next != NULL) {
+		printExpression(expression_list->expression);
+	}
+}
+
+void printExpression(Expression* expression) {
+	printf("Expression: %d\n", expression->node_type);
+	switch(expression->node_type) {
+		case 0:
+			printSimpleExpression(expression->expression.simple_expression);
+			break;
+		case 1:
+			printRelationalExpression(expression->expression.relation);
+			break;
+	}
+}
+
+void printRelationalExpression(RelationalExpression* relation) {
+	printf("RelationalExpression\n");
+	printSimpleExpression(relation->simple_expression);
+	printf("%d\n", relation->relop);
+	printExpression(relation->next);
+}
+
+void printSimpleExpression(SimpleExpression* simple_expression) {
+	printf("SimpleExpression\n");
+	switch (simple_expression->node_type) {
+		case 0:
+			printTerm(simple_expression->simple_expression.term);
+			break;
+		case 1:
+			printSignedTerm(simple_expression->simple_expression.signed_term);
+			break;
+		case 2:
+			printAddition(simple_expression->simple_expression.addition);
+			break;
+	}
+}
+
+void printSignedTerm(SignedTerm* signed_term) {
+	printf("SignedTerm\n");
+	printf("%d\n", signed_term->sign);
+	printTerm(signed_term->term);
+}
+
+void printAddition(Addition* addition) {
+	printf("Addition\n");
+	printSimpleExpression(addition->next);
+	printf("%d\n", addition->addop);
+	printTerm(addition->term);
+}
+
+void printTerm(Term* term) {
+	printf("Term\n");
+	switch (term->node_type) {
+		case 0:
+			printFactor(term->term.factor);
+			break;
+		case 1:
+			printMultiplication(term->term.multiplication);
+			break;
+	}
+}
+
+void printMultiplication(Multiplication* multiplication) {
+	printf("Multiplication\n");
+	printf("%d\n", multiplication->mulop);
+	printFactor(multiplication->factor);
+	printTerm(multiplication->next);
+}
+
+void printFactor(Factor* factor) {
+	printf("Factor: %d\n", factor->node_type);
+	switch (factor->node_type) {
+		case 0:
+			printFactorExpressionList(factor->factor.expression_list);
+			break;
+		case 1:
+			printVariable(factor->factor.variable);
+			break;
+		case 2:
+			printf("%d\n", factor->factor.integer);
+			break;
+		case 3:
+			printf("%f\n", factor->factor.real);
+			break;
+		case 4:
+			printExpression(factor->factor.expression);
+			break;
+		case 5:
+			printFactor(factor->factor.factor);
+			break;
+	}
+}
+
+void printFactorExpressionList(FactorExpressionList* expression_list) {
+	printf("FactorExpressionList\n");
+	printf("%s\n", expression_list->identifier);
+	printExpressionList(expression_list->expression_list);
 }
