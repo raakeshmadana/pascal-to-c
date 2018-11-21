@@ -138,8 +138,13 @@ identifierlist: IDENTIFIER {
 			  | identifierlist COMMA IDENTIFIER {
 					IdentifierList* identifier_list = (IdentifierList*)malloc(sizeof(identifier_list));
 					identifier_list->identifier = $3;
-					identifier_list->next = $1;
-					$$ = identifier_list;
+					identifier_list->next = NULL;
+					IdentifierList* temp = $1;
+					while(temp->next != NULL) {
+						temp = temp->next;
+					}
+					temp->next = identifier_list;
+					$$ = $1;
 				}
 ;
 
@@ -232,8 +237,13 @@ parameterlist: identifierlist COLON type {
 					ParameterList* parameter_list = (ParameterList*)malloc(sizeof(ParameterList));
 					parameter_list->identifier_list = $3;
 					parameter_list->type = $5;
-					parameter_list->next = $1;
-					$$ = parameter_list;
+					parameter_list->next = NULL;
+					ParameterList* temp = $1;
+					while(temp->next != NULL) {
+						temp = temp->next;
+					}
+					temp->next = parameter_list;
+					$$ = $1;
 				}
 ;
 
@@ -349,8 +359,13 @@ expressionlist: expression {
 			  | expressionlist COMMA expression {
 					ExpressionList* expression_list = (ExpressionList*)malloc(sizeof(ExpressionList));
 					expression_list->expression = $3;
-					expression_list->next = $1;
-					$$ = expression_list;
+					expression_list->next = NULL;
+					ExpressionList* temp = $1;
+					while(temp->next != NULL) {
+						temp = temp->next;
+					}
+					temp->next = expression_list;
+					$$ = $1;
 				}
 ;
 
