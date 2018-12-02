@@ -2,6 +2,8 @@
 #include <stdio.h>
 #include <stdlib.h>
 
+#include "uthash.h"
+
 #include "pascal.h"
 
 extern int yylex();
@@ -40,6 +42,27 @@ void printTerm(Term*);
 void printMultiplication(Multiplication*);
 void printFactor(Factor*);
 void printFactorExpressionList(FactorExpressionList*);
+
+struct SymbolTable {
+	char* symbol;
+	int type;
+	union {
+		int data_type;
+		struct {
+			int data_type;
+			int start_index;
+			int end_index;
+		} array;
+		int* arguments_type;
+		struct {
+			int return_type;
+			int* arguments_type;
+		} function;
+	} attributes;
+	UT_hash_handle hh;
+};
+
+struct SymbolTable *symbols = NULL;
 %}
 
 %union {
