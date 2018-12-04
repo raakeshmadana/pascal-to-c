@@ -234,17 +234,80 @@ void printSubprogramHead(SubprogramHead* subprogram_head) {
 	}
 }
 
+void printArguments(ParameterList* arguments, FILE* prototypes) {
+	while(arguments != NULL) {
+		IdentifierList* temp = arguments->identifier_list;
+		Type* type = arguments->type;
+
+		// Determine datatype of the parameters
+		char* data_type;
+		switch(type->node_type) {
+			case 0:
+				data_type = (type->type.standard_type == 0) ? "int" : "float";
+				break;
+			case 1:
+				data_type = (type->type.array_type->standard_type == 0) ? "int" : "float";
+				break;
+		}
+
+		char *parameter;
+		while(temp != NULL) {
+			fprintf(prototypes, "%s ", data_type);
+
+			parameter = temp->identifier;
+			if(type->node_type == 1) {
+				strcat(parameter, "[]");
+			}
+			fprintf(prototypes, "%s", parameter);
+			
+			// Don't add a comma after the last parameter
+			if(temp->next != NULL || arguments->next != NULL) {
+				fprintf(prototypes, ", ");
+			}
+
+			temp = temp->next;
+		}
+
+		arguments = arguments->next;
+	}
+
+	fprintf(prototypes, ");\n");
+}
+
 void printFunction(FunctionRule* function_rule) {
 	printf("Function\n");
 	printf("%s\n", function_rule->identifier);
 	printParameterList(function_rule->arguments);
 	printf("%d\n", function_rule->standard_type);
+
+	FILE *prototypes;
+	prototypes = fopen("functions.h", "a");
+
+	// Determine return type
+	char *return_type = (function_rule->standard_type == 0) ? "int" : "float";
+	fprintf(prototypes, "%s ", return_type);
+	fprintf(prototypes, "%s(", function_rule->identifier);
+
+	printArguments(function_rule->arguments, prototypes);
+
+	fclose(prototypes);
 }
 
 void printProcedure(ProcedureRule* procedure_rule) {
 	printf("Procedure\n");
 	printf("%s\n", procedure_rule->identifier);
 	printParameterList(procedure_rule->arguments);
+
+	FILE *prototypes;
+	prototypes = fopen("functions.h", "a");
+
+	// Procedures don't return
+	fprintf(prototypes, "void ");
+	fprintf(prototypes, "%s(", procedure_rule->identifier);
+
+	printArguments(procedure_rule->arguments, prototypes);
+
+	fclose(prototypes);
 }
 
 void printParameterList(ParameterList* parameter_list) {

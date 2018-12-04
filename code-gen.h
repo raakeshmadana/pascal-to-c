@@ -55,6 +55,7 @@ void printSubprogDeclaration(SubprogDeclaration*);
 void printSubprogramHead(SubprogramHead*);
 void printFunction(FunctionRule*);
 void printProcedure(ProcedureRule*);
+void printArguments(ParameterList*, FILE*);
 void printParameterList(ParameterList*);
 void printStatementList(StatementList*);
 void printCompoundStatement(StatementList*);
