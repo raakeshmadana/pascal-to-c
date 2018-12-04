@@ -110,18 +110,18 @@ struct Statement {
 		StatementList* compound_statement;
 		struct IfThen {
 			Expression* expression;
-			Statement* next;
+			Statement* statement;
 			Statement* else_clause;
 		} *if_then;
 		struct WhileDo {
 			Expression* expression;
-			Statement* next;
+			Statement* statement;
 		} *while_do;
 		struct ForTo {
 			char* identifier;
 			Expression* expression1;
 			Expression* expression2;
-			Statement* next;
+			Statement* statement;
 		} *for_to;
 	} statement;
 };
@@ -160,7 +160,7 @@ struct Expression {
 		struct RelationalExpression {
 			SimpleExpression* simple_expression;
 			int relop;
-			Expression* next;
+			Expression* expression;
 		} *relation;
 	} expression;
 };
@@ -174,7 +174,7 @@ struct SimpleExpression {
 			Term* term;
 		} *signed_term;
 		struct Addition {
-			SimpleExpression* next;
+			SimpleExpression* simple_expression;
 			int addop;
 			Term* term;
 		} *addition;
@@ -188,7 +188,7 @@ struct Term {
 		struct Multiplication {
 			int mulop;
 			Factor* factor;
-			Term* next;
+			Term* term;
 		} *multiplication;
 	} term;
 };

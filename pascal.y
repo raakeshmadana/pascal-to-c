@@ -270,7 +270,7 @@ statement: variable ASSIGN expression {
 				statement->node_type = 3;
 				statement->statement.if_then = (IfThen*)malloc(sizeof(IfThen));
 				statement->statement.if_then->expression = $2;
-				statement->statement.if_then->next = $4;
+				statement->statement.if_then->statement = $4;
 				statement->statement.if_then->else_clause = $5;
 				$$ = statement;
 			}
@@ -279,7 +279,7 @@ statement: variable ASSIGN expression {
 				statement->node_type = 4;
 				statement->statement.while_do = (WhileDo*)malloc(sizeof(WhileDo));
 				statement->statement.while_do->expression = $2;
-				statement->statement.while_do->next = $4;
+				statement->statement.while_do->statement = $4;
 				$$ = statement;
 			}
 		 | FOR IDENTIFIER ASSIGN expression TO expression DO statement {
@@ -289,7 +289,7 @@ statement: variable ASSIGN expression {
 				statement->statement.for_to->identifier = $2;
 				statement->statement.for_to->expression1 = $4;
 				statement->statement.for_to->expression2 = $6;
-				statement->statement.for_to->next = $8;
+				statement->statement.for_to->statement = $8;
 				$$ = statement;
 			}
 ;
@@ -361,17 +361,17 @@ expression: simpleexpression {
 				expression->expression.relation = (RelationalExpression*)malloc(sizeof(RelationalExpression));
 				expression->expression.relation->simple_expression = $1;
 				expression->expression.relation->relop = $2;
-				expression->expression.relation->next = $3;
+				expression->expression.relation->expression = $3;
 				$$ = expression;
 			}
 ;
 
-relop: EQUALS { $$ = $1; }
-	 | NOTEQUALS { $$ = $1; }
-	 | LESS { $$ = $1; }
-	 | LESSEQUALS { $$ = $1; }
-	 | GREAT { $$ = $1; }
-	 | GREATEQUALS { $$ = $1; }
+relop: EQUALS { $$ = 0; }
+	 | NOTEQUALS { $$ = 1; }
+	 | LESS { $$ = 2; }
+	 | LESSEQUALS { $$ = 3; }
+	 | GREAT { $$ = 4; }
+	 | GREATEQUALS { $$ = 5; }
 ;
 
 simpleexpression: term {
@@ -394,14 +394,14 @@ simpleexpression: term {
 						simple_expression->simple_expression.addition = (Addition*)malloc(sizeof(Addition));
 						simple_expression->simple_expression.addition->addop = $2;
 						simple_expression->simple_expression.addition->term = $3;
-						simple_expression->simple_expression.addition->next = $1;
+						simple_expression->simple_expression.addition->simple_expression = $1;
 						$$ = simple_expression;
 					}
 ;
 
-addop: PLUS { $$ = $1; }
-	 | MINUS { $$ = $1; }
-	 | OR { $$ = $1; }
+addop: PLUS { $$ = 0; }
+	 | MINUS { $$ = 1; }
+	 | OR { $$ = 2; }
 ;
 
 term: factor {
@@ -416,16 +416,16 @@ term: factor {
 			term->term.multiplication = (Multiplication*)malloc(sizeof(Multiplication));
 			term->term.multiplication->mulop = $2;
 			term->term.multiplication->factor = $3;
-			term->term.multiplication->next = $1;
+			term->term.multiplication->term = $1;
 			$$ = term;
 		}
 ;
 
-mulop: ASTERISK { $$ = $1; }
-	 | SOLIDUS { $$ = $1; }
-	 | DIV { $$ = $1; }
-	 | MODULUS { $$ = $1; }
-	 | AND { $$ = $1; }
+mulop: ASTERISK { $$ = 0; }
+	 | SOLIDUS { $$ = 1; }
+	 | DIV { $$ = 2; }
+	 | MODULUS { $$ = 3; }
+	 | AND { $$ = 4; }
 ;
 
 factor: IDENTIFIER LPAREN expressionlist RPAREN {
@@ -468,8 +468,8 @@ factor: IDENTIFIER LPAREN expressionlist RPAREN {
 		}
 ;
 
-sign: PLUS { $$ = $1; }
-	| MINUS { $$ = $1; }
+sign: PLUS { $$ = 0; }
+	| MINUS { $$ = 1; }
 ;
 
 %%
