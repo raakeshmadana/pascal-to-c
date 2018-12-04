@@ -47,7 +47,7 @@ void printSymbols();
 
 void printTree(Program*);
 void printIdentifierList(IdentifierList*);
-void printDeclarations(Declarations*);
+void printDeclarations(Declarations*, FILE*);
 void printType(Type*);
 void printArrayType(ArrayType*);
 void printSubDeclarations(SubDeclarations*);
@@ -55,7 +55,7 @@ void printSubprogDeclaration(SubprogDeclaration*);
 void printSubprogramHead(SubprogramHead*);
 void printFunction(FunctionRule*);
 void printProcedure(ProcedureRule*);
-void printArguments(ParameterList*, FILE*);
+void printArguments(ParameterList*, FILE*, FILE*);
 void printParameterList(ParameterList*);
 void printStatementList(StatementList*);
 void printCompoundStatement(StatementList*);

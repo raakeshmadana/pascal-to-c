@@ -166,7 +166,21 @@ void printSymbols() {
 
 void printTree(Program* program) {
 	printf("%s\n", program->identifier);
-	printDeclarations(program->declarations);
+	// Determine file name
+	/*char *file = (char*)malloc(strlen(program->identifier) + 1 + 2);
+	strcpy(file, program->identifier);
+	strcat(file, ".c");
+	FILE* main = fopen(file, "a");*/
+
+	FILE* main = fopen("main.c", "a");
+
+	// Include headers
+	fprintf(main, "#include <stdio.h>\n");
+	fprintf(main, "#include <stdlib.h>\n\n");
+
+	printDeclarations(program->declarations, main);
+	fclose(main);
+
 	printSubDeclarations(program->sub_declarations);
 	printCompoundStatement(program->compound_statement);
 }
@@ -178,11 +192,49 @@ void printIdentifierList(IdentifierList* identifier_list) {
 		identifier_list = identifier_list->next;
 	}
 }
-void printDeclarations(Declarations* declarations) {
-	printf("Declarations\n");
+void printDeclarations(Declarations* declarations, FILE* file) {
 	while (declarations != NULL) {
-		printIdentifierList(declarations->identifier_list);
-		printType(declarations->type);
+		// Determine data type
+		Type* type = declarations->type;
+		char* data_type;
+		switch(type->node_type) {
+			case 0:
+				data_type = (type->type.standard_type == 0) ? "int" : "float";
+				break;
+			case 1:
+				data_type = (type->type.array_type->standard_type == 0) ? "int" : "float";
+				break;
+		}
+		fprintf(file, "%s ", data_type);
+
+		IdentifierList* temp = declarations->identifier_list;
+		char *identifier;
+		while(temp != NULL) {
+			identifier = (char*)malloc(strlen(temp->identifier) + 1 + 2 + 6);
+			strcpy(identifier, temp->identifier);
+
+			if(type->node_type == 1) {
+				// Find the size of the array
+				ArrayType* array_type = type->type.array_type;
+				int size = array_type->to - array_type->from + 1;
+				char* subscript = (char*)malloc(1 + 2 + 6);
+				sprintf(subscript, "[%d]", size);
+				strcat(identifier, subscript);
+				free(subscript);
+			}
+
+			fprintf(file, "%s", identifier);
+			free(identifier);
+			
+			// Add a semi-colon after the last variable
+			if(temp->next != NULL) {
+				fprintf(file, ", ");
+			} else {
+				fprintf(file, ";\n");
+			}
+
+			temp = temp->next;
+		}
 		declarations = declarations->next;
 	}
 }
@@ -209,6 +261,12 @@ void printArrayType(ArrayType* array_type) {
 
 void printSubDeclarations(SubDeclarations* sub_declarations) {
 	printf("SubDeclarations\n");
+	if(sub_declarations != NULL) {
+		FILE* definitions = fopen("functions.c", "a");
+		fprintf(definitions, "#include \"functions.h\"\n\n");
+		fclose(definitions);
+	}
+
 	while (sub_declarations != NULL) {
 		printSubprogDeclaration(sub_declarations->subprog_declaration);
 		sub_declarations = sub_declarations->next;
@@ -218,7 +276,12 @@ void printSubDeclarations(SubDeclarations* sub_declarations) {
 void printSubprogDeclaration(SubprogDeclaration* subprog_declaration) {
 	printf("SubprogDeclaration\n");
 	printSubprogramHead(subprog_declaration->subprogram_head);
-	printDeclarations(subprog_declaration->declarations);
+
+	FILE* definitions = fopen("functions.c", "a");
+	printDeclarations(subprog_declaration->declarations, definitions);
+	fprintf(definitions, "}\n");
+	fclose(definitions);
+
 	printCompoundStatement(subprog_declaration->compound_statement);
 }
 
@@ -234,7 +297,7 @@ void printSubprogramHead(SubprogramHead* subprogram_head) {
 	}
 }
 
-void printArguments(ParameterList* arguments, FILE* prototypes) {
+void printArguments(ParameterList* arguments, FILE* prototypes, FILE* definitions) {
 	while(arguments != NULL) {
 		IdentifierList* temp = arguments->identifier_list;
 		Type* type = arguments->type;
@@ -253,16 +316,29 @@ void printArguments(ParameterList* arguments, FILE* prototypes) {
 		char *parameter;
 		while(temp != NULL) {
 			fprintf(prototypes, "%s ", data_type);
-
-			parameter = temp->identifier;
-			if(type->node_type == 1) {
-				strcat(parameter, "[]");
-			}
-			fprintf(prototypes, "%s", parameter);
+			fprintf(definitions, "%s ", data_type);
 			
+			parameter = (char*)malloc(strlen(temp->identifier) + 1 + 2 + 6);
+			strcpy(parameter, temp->identifier);
+
+			if(type->node_type == 1) {
+				// Find the size of the array
+				ArrayType* array_type = type->type.array_type;
+				int size = array_type->to - array_type->from + 1;
+				char* subscript = (char*)malloc(1 + 2 + 6);
+				sprintf(subscript, "[%d]", size);
+				strcat(parameter, subscript);
+				free(subscript);
+			}
+
+			fprintf(prototypes, "%s", parameter);
+			fprintf(definitions, "%s", parameter);
+			free(parameter);
+
 			// Don't add a comma after the last parameter
 			if(temp->next != NULL || arguments->next != NULL) {
 				fprintf(prototypes, ", ");
+				fprintf(definitions, ", ");
 			}
 
 			temp = temp->next;
@@ -272,6 +348,7 @@ void printArguments(ParameterList* arguments, FILE* prototypes) {
 	}
 
 	fprintf(prototypes, ");\n");
+	fprintf(definitions, ") {\n");
 }
 
 void printFunction(FunctionRule* function_rule) {
@@ -280,17 +357,21 @@ void printFunction(FunctionRule* function_rule) {
 	printParameterList(function_rule->arguments);
 	printf("%d\n", function_rule->standard_type);
 
-	FILE *prototypes;
+	FILE *prototypes, *definitions;
 	prototypes = fopen("functions.h", "a");
+	definitions = fopen("functions.c", "a");
 
 	// Determine return type
 	char *return_type = (function_rule->standard_type == 0) ? "int" : "float";
 	fprintf(prototypes, "%s ", return_type);
+	fprintf(definitions, "%s ", return_type);
 	fprintf(prototypes, "%s(", function_rule->identifier);
+	fprintf(definitions, "%s(", function_rule->identifier);
 
-	printArguments(function_rule->arguments, prototypes);
+	printArguments(function_rule->arguments, prototypes, definitions);
 
 	fclose(prototypes);
+	fclose(definitions);
 }
 
 void printProcedure(ProcedureRule* procedure_rule) {
@@ -298,16 +379,20 @@ void printProcedure(ProcedureRule* procedure_rule) {
 	printf("%s\n", procedure_rule->identifier);
 	printParameterList(procedure_rule->arguments);
 
-	FILE *prototypes;
+	FILE *prototypes, *definitions;
 	prototypes = fopen("functions.h", "a");
+	definitions = fopen("functions.c", "a");
 
 	// Procedures don't return
 	fprintf(prototypes, "void ");
+	fprintf(definitions, "void ");
 	fprintf(prototypes, "%s(", procedure_rule->identifier);
+	fprintf(definitions, "%s(", procedure_rule->identifier);
 
-	printArguments(procedure_rule->arguments, prototypes);
+	printArguments(procedure_rule->arguments, prototypes, definitions);
 
 	fclose(prototypes);
+	fclose(definitions);
 }
 
 void printParameterList(ParameterList* parameter_list) {
