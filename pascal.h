@@ -16,8 +16,8 @@ typedef struct Expression Expression;
 typedef struct SimpleExpression SimpleExpression;
 typedef struct Term Term;
 typedef struct Factor Factor;
-typedef struct Function Function;
-typedef struct Procedure Procedure;
+typedef struct FunctionRule FunctionRule;
+typedef struct ProcedureRule ProcedureRule;
 typedef struct Assignment Assignment;
 typedef struct IfThen IfThen;
 typedef struct WhileDo WhileDo;
@@ -76,15 +76,15 @@ struct SubprogDeclaration {
 struct SubprogramHead {
 	int node_type;
 	union {
-		struct Function {
+		struct FunctionRule {
 			char* identifier;
 			ParameterList* arguments;
 			int standard_type;
-		} *function;
-		struct Procedure {
+		} *function_rule;
+		struct ProcedureRule {
 			char* identifier;
 			ParameterList* arguments;
-		} *procedure;
+		} *procedure_rule;
 	} subprogram_head;
 };
 

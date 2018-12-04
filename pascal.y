@@ -2,67 +2,11 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-#include "uthash.h"
-
-#include "pascal.h"
+#include "code-gen.h"
 
 extern int yylex();
 extern int yyparse();
 void yyerror(char const *);
-
-void printTree(Program*);
-void printIdentifierList(IdentifierList*);
-void printDeclarations(Declarations*);
-void printType(Type*);
-void printArrayType(ArrayType*);
-void printSubDeclarations(SubDeclarations*);
-void printSubprogDeclaration(SubprogDeclaration*);
-void printSubprogramHead(SubprogramHead*);
-void printFunction(Function*);
-void printProcedure(Procedure*);
-void printParameterList(ParameterList*);
-void printStatementList(StatementList*);
-void printCompoundStatement(StatementList*);
-void printStatement(Statement*);
-void printAssignment(Assignment*);
-void printIfThen(IfThen*);
-void printWhileDo(WhileDo*);
-void printForTo(ForTo*);
-void printVariable(Variable*);
-void printVariableExpression(VariableExpression*);
-void printProcStatement(ProcStatement*);
-void printProcStatementExpressionList(ProcStatementExpressionList*);
-void printExpressionList(ExpressionList*);
-void printExpression(Expression*);
-void printRelationalExpression(RelationalExpression*);
-void printSimpleExpression(SimpleExpression*);
-void printSignedTerm(SignedTerm*);
-void printAddition(Addition*);
-void printTerm(Term*);
-void printMultiplication(Multiplication*);
-void printFactor(Factor*);
-void printFactorExpressionList(FactorExpressionList*);
-
-struct SymbolTable {
-	char* symbol;
-	int type;
-	union {
-		int data_type;
-		struct {
-			int data_type;
-			int start_index;
-			int end_index;
-		} array;
-		int* arguments_type;
-		struct {
-			int return_type;
-			int* arguments_type;
-		} function;
-	} attributes;
-	UT_hash_handle hh;
-};
-
-struct SymbolTable *symbols = NULL;
 %}
 
 %union {
@@ -148,6 +92,9 @@ program: PROGRAM IDENTIFIER SEMICOLON declarations subdeclarations compoundstate
 			program->sub_declarations = $5;
 			program->compound_statement = $6;
 			$$ = program;
+
+			addProgramName($2);
+			printSymbols();
 			printTree(program);
 		}
 ;
@@ -178,6 +125,12 @@ declarations: %empty { $$ = NULL; }
 					declarations->type = $5;
 					declarations->next = $1;
 					$$ = declarations;
+
+					IdentifierList* temp = $3;
+					while(temp != NULL) {
+						addVariable(temp->identifier, $5);
+						temp = temp->next;
+					}
 			}
 ;
 
@@ -195,8 +148,8 @@ type: standardtype {
 		}
 ;
 
-standardtype: INTEGER { $$ = $1; }
-			| REAL { $$ = $1; }
+standardtype: INTEGER { $$ = 0; }
+			| REAL { $$ = 1; }
 ;
 
 arraytype: ARRAY LSQUARE INTNUM DOUBLEDOT INTNUM RSQUARE OF standardtype {
@@ -229,19 +182,23 @@ subprogdeclaration: subprogramhead declarations compoundstatement {
 subprogramhead: FUNCTION IDENTIFIER arguments COLON standardtype SEMICOLON {
 						SubprogramHead* subprogram_head = (SubprogramHead*)malloc(sizeof(SubprogramHead));
 						subprogram_head->node_type = 0;
-						subprogram_head->subprogram_head.function = (Function*)malloc(sizeof(Function));
-						subprogram_head->subprogram_head.function->identifier = $2;
-						subprogram_head->subprogram_head.function->arguments = $3;
-						subprogram_head->subprogram_head.function->standard_type = $5;
+						subprogram_head->subprogram_head.function_rule = (FunctionRule*)malloc(sizeof(FunctionRule));
+						subprogram_head->subprogram_head.function_rule->identifier = $2;
+						subprogram_head->subprogram_head.function_rule->arguments = $3;
+						subprogram_head->subprogram_head.function_rule->standard_type = $5;
 						$$ = subprogram_head;
+						
+						addFunction($2, $3, $5);
 					}
 			  | PROCEDURE IDENTIFIER arguments SEMICOLON {
 						SubprogramHead* subprogram_head = (SubprogramHead*)malloc(sizeof(SubprogramHead));
 						subprogram_head->node_type = 1;
-						subprogram_head->subprogram_head.procedure = (Procedure*)malloc(sizeof(Procedure));
-						subprogram_head->subprogram_head.procedure->identifier = $2;
-						subprogram_head->subprogram_head.procedure->arguments = $3;
+						subprogram_head->subprogram_head.procedure_rule = (ProcedureRule*)malloc(sizeof(ProcedureRule));
+						subprogram_head->subprogram_head.procedure_rule->identifier = $2;
+						subprogram_head->subprogram_head.procedure_rule->arguments = $3;
 						$$ = subprogram_head;
+
+						addProcedure($2, $3);
 					}
 ;
 
@@ -523,302 +480,4 @@ int main() {
 
 void yyerror(char const *s) {
 	fprintf(stderr, "%s\n", s);
-}
-
-void printTree(Program* program) {
-	printf("%s\n", program->identifier);
-	printDeclarations(program->declarations);
-	printSubDeclarations(program->sub_declarations);
-	printCompoundStatement(program->compound_statement);
-}
-
-void printIdentifierList(IdentifierList* identifier_list) {
-	printf("IdentifierList\n");
-	while (identifier_list != NULL) {
-		printf("%s\n", identifier_list->identifier);
-		identifier_list = identifier_list->next;
-	}
-}
-void printDeclarations(Declarations* declarations) {
-	printf("Declarations\n");
-	while (declarations != NULL) {
-		printIdentifierList(declarations->identifier_list);
-		printType(declarations->type);
-		declarations = declarations->next;
-	}
-}
-
-void printType(Type* type) {
-	printf("Type\n");
-	switch (type->node_type) {
-		case 0:
-			printf("StandardType:%d\n", type->type.standard_type);
-			break;
-		case 1:
-			printArrayType(type->type.array_type);
-			break;
-	}
-}
-
-void printArrayType(ArrayType* array_type) {
-	printf("ArrayType\n");
-	printf("From:%d\n", array_type->from);
-	printf("To:%d\n", array_type->to);
-	printf("StandardType:%d\n", array_type->standard_type);
-	printf("Exiting ArrayType\n");
-}
-
-void printSubDeclarations(SubDeclarations* sub_declarations) {
-	printf("SubDeclarations\n");
-	while (sub_declarations != NULL) {
-		printSubprogDeclaration(sub_declarations->subprog_declaration);
-		sub_declarations = sub_declarations->next;
-	}
-}
-
-void printSubprogDeclaration(SubprogDeclaration* subprog_declaration) {
-	printf("SubprogDeclaration\n");
-	printSubprogramHead(subprog_declaration->subprogram_head);
-	printDeclarations(subprog_declaration->declarations);
-	printCompoundStatement(subprog_declaration->compound_statement);
-}
-
-void printSubprogramHead(SubprogramHead* subprogram_head) {
-	printf("SubprogramHead\n");
-	switch (subprogram_head->node_type) {
-		case 0:
-			printFunction(subprogram_head->subprogram_head.function);
-			break;
-		case 1:
-			printProcedure(subprogram_head->subprogram_head.procedure);
-			break;
-	}
-}
-
-void printFunction(Function* function) {
-	printf("Function\n");
-	printf("%s\n", function->identifier);
-	printParameterList(function->arguments);
-	printf("%d\n", function->standard_type);
-}
-
-void printProcedure(Procedure* procedure) {
-	printf("Procedure\n");
-	printf("%s\n", procedure->identifier);
-	printParameterList(procedure->arguments);
-}
-
-void printParameterList(ParameterList* parameter_list) {
-	printf("ParameterList\n");
-	while (parameter_list != NULL) {
-		printIdentifierList(parameter_list->identifier_list);
-		printType(parameter_list->type);
-		parameter_list = parameter_list->next;
-	}
-}
-
-void printStatementList(StatementList* statement_list) {
-	printf("StatementList\n");
-	while (statement_list != NULL) {
-		printStatement(statement_list->statement);
-		statement_list = statement_list->next;
-	}
-}
-
-void printCompoundStatement(StatementList* statement_list) {
-	printf("CompoundStatement\n");
-	while (statement_list != NULL) {
-		printStatement(statement_list->statement);
-		statement_list = statement_list->next;
-	}
-}
-
-void printStatement(Statement* statement) {
-	printf("Statement: %d\n", statement->node_type);
-	if (statement != NULL) {
-		switch (statement->node_type) {
-			case 0:
-				printAssignment(statement->statement.assignment);
-				break;
-			case 1:
-				printProcStatement(statement->statement.proc_statement);
-				break;
-			case 2:
-				printCompoundStatement(statement->statement.compound_statement);
-				break;
-			case 3:
-				printIfThen(statement->statement.if_then);
-				break;
-			case 4:
-				printWhileDo(statement->statement.while_do);
-				break;
-			case 5:
-				printForTo(statement->statement.for_to);
-				break;
-		}
-	}
-}
-
-void printAssignment(Assignment* assignment) {
-	printf("Assignment\n");
-	printVariable(assignment->variable);
-	printExpression(assignment->expression);
-}
-
-void printIfThen(IfThen* if_then) {
-	printf("IfThen\n");
-	printExpression(if_then->expression);
-	printStatement(if_then->next);
-	printStatement(if_then->else_clause);
-}
-
-void printWhileDo(WhileDo* while_do) {
-	printf("WhileDo\n");
-	printExpression(while_do->expression);
-	printStatement(while_do->next);
-}
-
-void printForTo(ForTo* for_to) {
-	printf("ForTo\n");
-	printf("%s\n", for_to->identifier);
-	printExpression(for_to->expression1);
-	printExpression(for_to->expression2);
-	printStatement(for_to->next);
-}
-
-void printVariable(Variable* variable) {
-	printf("Variable: %d\n", variable->node_type);
-	switch (variable->node_type) {
-		case 0:
-			printf("%s\n", variable->variable.identifier);
-			break;
-		case 1:
-			printVariableExpression(variable->variable.expression);
-			break;
-	}
-}
-
-void printVariableExpression(VariableExpression* expression) {
-	printf("VariableExpression\n");
-	printf("%s\n", expression->identifier);
-	printExpression(expression->expression);
-}
-
-void printProcStatement(ProcStatement* proc_statement) {
-	printf("ProcStatement\n");
-	switch (proc_statement->node_type) {
-		case 0:
-			printf("%s\n", proc_statement->proc_statement.identifier);
-		case 1:
-			printProcStatementExpressionList(proc_statement->proc_statement.expression_list);
-	}
-}
-
-void printProcStatementExpressionList(ProcStatementExpressionList* expression_list) {
-	printf("ProcStatementExpressionList\n");
-	printf("%s\n", expression_list->identifier);
-	printExpressionList(expression_list->expression_list);
-}
-
-void printExpressionList(ExpressionList* expression_list) {
-	printf("ExpressionList\n");
-	while (expression_list->next != NULL) {
-		printExpression(expression_list->expression);
-	}
-}
-
-void printExpression(Expression* expression) {
-	printf("Expression: %d\n", expression->node_type);
-	switch(expression->node_type) {
-		case 0:
-			printSimpleExpression(expression->expression.simple_expression);
-			break;
-		case 1:
-			printRelationalExpression(expression->expression.relation);
-			break;
-	}
-}
-
-void printRelationalExpression(RelationalExpression* relation) {
-	printf("RelationalExpression\n");
-	printSimpleExpression(relation->simple_expression);
-	printf("%d\n", relation->relop);
-	printExpression(relation->next);
-}
-
-void printSimpleExpression(SimpleExpression* simple_expression) {
-	printf("SimpleExpression\n");
-	switch (simple_expression->node_type) {
-		case 0:
-			printTerm(simple_expression->simple_expression.term);
-			break;
-		case 1:
-			printSignedTerm(simple_expression->simple_expression.signed_term);
-			break;
-		case 2:
-			printAddition(simple_expression->simple_expression.addition);
-			break;
-	}
-}
-
-void printSignedTerm(SignedTerm* signed_term) {
-	printf("SignedTerm\n");
-	printf("%d\n", signed_term->sign);
-	printTerm(signed_term->term);
-}
-
-void printAddition(Addition* addition) {
-	printf("Addition\n");
-	printSimpleExpression(addition->next);
-	printf("%d\n", addition->addop);
-	printTerm(addition->term);
-}
-
-void printTerm(Term* term) {
-	printf("Term\n");
-	switch (term->node_type) {
-		case 0:
-			printFactor(term->term.factor);
-			break;
-		case 1:
-			printMultiplication(term->term.multiplication);
-			break;
-	}
-}
-
-void printMultiplication(Multiplication* multiplication) {
-	printf("Multiplication\n");
-	printf("%d\n", multiplication->mulop);
-	printFactor(multiplication->factor);
-	printTerm(multiplication->next);
-}
-
-void printFactor(Factor* factor) {
-	printf("Factor: %d\n", factor->node_type);
-	switch (factor->node_type) {
-		case 0:
-			printFactorExpressionList(factor->factor.expression_list);
-			break;
-		case 1:
-			printVariable(factor->factor.variable);
-			break;
-		case 2:
-			printf("%d\n", factor->factor.integer);
-			break;
-		case 3:
-			printf("%f\n", factor->factor.real);
-			break;
-		case 4:
-			printExpression(factor->factor.expression);
-			break;
-		case 5:
-			printFactor(factor->factor.factor);
-			break;
-	}
-}
-
-void printFactorExpressionList(FactorExpressionList* expression_list) {
-	printf("FactorExpressionList\n");
-	printf("%s\n", expression_list->identifier);
-	printExpressionList(expression_list->expression_list);
 }
