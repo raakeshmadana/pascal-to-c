@@ -456,13 +456,13 @@ factor: IDENTIFIER LPAREN expressionlist RPAREN {
 		}
 	  | LPAREN expression RPAREN {
 			Factor* factor = (Factor*)malloc(sizeof(Factor));
-			factor->node_type = 5;
+			factor->node_type = 4;
 			factor->factor.expression = $2;
 			$$ = factor;
 		}
 	  | NOT factor {
 			Factor* factor = (Factor*)malloc(sizeof(Factor));
-			factor->node_type = 6;
+			factor->node_type = 5;
 			factor->factor.factor = $2;
 			$$ = factor;
 		}

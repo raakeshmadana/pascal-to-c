@@ -167,12 +167,12 @@ void printSymbols() {
 void printTree(Program* program) {
 	printf("%s\n", program->identifier);
 	// Determine file name
-	/*char *file = (char*)malloc(strlen(program->identifier) + 1 + 2);
+	char *file = (char*)malloc(strlen(program->identifier) + 1 + 2);
 	strcpy(file, program->identifier);
 	strcat(file, ".c");
-	FILE* main = fopen(file, "a");*/
+	FILE* main = fopen(file, "a");
 
-	FILE* main = fopen("main.c", "a");
+	//FILE* main = fopen("main.c", "a");
 
 	// Include headers
 	fprintf(main, "#include <stdio.h>\n");
@@ -449,18 +449,18 @@ void printStatement(Statement* statement, FILE* file) {
 
 void printAssignment(Assignment* assignment, FILE* file) {
 	printf("Assignment\n");
+
 	printVariable(assignment->variable, file);
-	fprintf(file, "= ");
-	fprintf(file, "EXPRESSION;\n");
-	printExpression(assignment->expression);
+	fprintf(file, " = ");
+	printExpression(assignment->expression, file);
+	fprintf(file, ";\n");
 }
 
 void printIfThen(IfThen* if_then, FILE* file) {
 	printf("IfThen\n");
 
 	fprintf(file, "if (");
-	fprintf(file, "EXPRESSION");
-	printExpression(if_then->expression);
+	printExpression(if_then->expression, file);
 	fprintf(file, ") {\n");
 
 	printStatement(if_then->statement, file);
@@ -470,14 +470,16 @@ void printIfThen(IfThen* if_then, FILE* file) {
 		fprintf(file, " else {\n");
 		printStatement(if_then->else_clause, file);
 		fprintf(file, "}\n");
+	} else {
+		fprintf(file, "\n");
 	}
 }
 
 void printWhileDo(WhileDo* while_do, FILE* file) {
 	printf("WhileDo\n");
 	fprintf(file, "while (");
-	printExpression(while_do->expression);
-	fprintf(file, "EXPRESSION) {\n");
+	printExpression(while_do->expression, file);
+	fprintf(file, ") {\n");
 	printStatement(while_do->statement, file);
 	fprintf(file, "}\n");
 }
@@ -487,13 +489,11 @@ void printForTo(ForTo* for_to, FILE* file) {
 	printf("%s\n", for_to->identifier);
 
 	fprintf(file, "for (%s = ", for_to->identifier);
-	fprintf(file, "EXPRESSION; ");
-	printExpression(for_to->expression1);
+	printExpression(for_to->expression1, file);
 
-	fprintf(file, "%s < ", for_to->identifier);
-	fprintf(file, "EXPRESSION; ");
-	printExpression(for_to->expression2);
-	fprintf(file, "%s++) {\n", for_to->identifier);
+	fprintf(file, "; %s < ", for_to->identifier);
+	printExpression(for_to->expression2, file);
+	fprintf(file, "; %s++) {\n", for_to->identifier);
 
 	printStatement(for_to->statement, file);
 
@@ -505,7 +505,7 @@ void printVariable(Variable* variable, FILE* file) {
 	switch (variable->node_type) {
 		case 0:
 			printf("%s\n", variable->variable.identifier);
-			fprintf(file, "%s ", variable->variable.identifier);
+			fprintf(file, "%s", variable->variable.identifier);
 			break;
 		case 1:
 			printVariableExpression(variable->variable.expression, file);
@@ -516,8 +516,10 @@ void printVariable(Variable* variable, FILE* file) {
 void printVariableExpression(VariableExpression* expression, FILE* file) {
 	printf("VariableExpression\n");
 	printf("%s\n", expression->identifier);
-	fprintf(file, "%s[EXPRESSION] ", expression->identifier);
-	printExpression(expression->expression);
+
+	fprintf(file, "%s[", expression->identifier);
+	printExpression(expression->expression, file);
+	fprintf(file, "] ");
 }
 
 void printProcStatement(ProcStatement* proc_statement, FILE* file) {
@@ -535,110 +537,188 @@ void printProcStatementExpressionList(ProcStatementExpressionList* expression_li
 	printf("ProcStatementExpressionList\n");
 	printf("%s\n", expression_list->identifier);
 	fprintf(file, "%s(", expression_list->identifier);
-	fprintf(file, "EXPRESSION-LIST);\n");
-	printExpressionList(expression_list->expression_list);
+
+	printExpressionList(expression_list->expression_list, file);
+
+	fprintf(file, ");\n");
 }
 
-void printExpressionList(ExpressionList* expression_list) {
+void printExpressionList(ExpressionList* expression_list, FILE* file) {
 	printf("ExpressionList\n");
 	while (expression_list != NULL) {
-		printExpression(expression_list->expression);
+		printExpression(expression_list->expression, file);
+		if (expression_list->next != NULL) {
+			fprintf(file, ", ");
+		}
 		expression_list = expression_list->next;
 	}
 }
 
-void printExpression(Expression* expression) {
+void printExpression(Expression* expression, FILE* file) {
 	printf("Expression: %d\n", expression->node_type);
+
 	switch(expression->node_type) {
 		case 0:
-			printSimpleExpression(expression->expression.simple_expression);
+			printSimpleExpression(expression->expression.simple_expression, file);
 			break;
 		case 1:
-			printRelationalExpression(expression->expression.relation);
+			printRelationalExpression(expression->expression.relation, file);
 			break;
 	}
 }
 
-void printRelationalExpression(RelationalExpression* relation) {
+void printRelationalExpression(RelationalExpression* relation, FILE* file) {
 	printf("RelationalExpression\n");
-	printSimpleExpression(relation->simple_expression);
+
+	printSimpleExpression(relation->simple_expression, file);
+
 	printf("%d\n", relation->relop);
-	printExpression(relation->expression);
+
+	char* relop;
+	switch (relation->relop) {
+		case 0:
+			relop = "==";
+			break;
+		case 1:
+			relop = "!=";
+			break;
+		case 2:
+			relop = "<";
+			break;
+		case 3:
+			relop = "<=";
+			break;
+		case 4:
+			relop = ">";
+			break;
+		case 5:
+			relop = ">=";
+			break;
+	}
+
+	fprintf(file, " %s ", relop);
+
+	printExpression(relation->expression, file);
 }
 
-void printSimpleExpression(SimpleExpression* simple_expression) {
+void printSimpleExpression(SimpleExpression* simple_expression, FILE* file) {
 	printf("SimpleExpression\n");
 	switch (simple_expression->node_type) {
 		case 0:
-			printTerm(simple_expression->simple_expression.term);
+			printTerm(simple_expression->simple_expression.term, file);
 			break;
 		case 1:
-			printSignedTerm(simple_expression->simple_expression.signed_term);
+			printSignedTerm(simple_expression->simple_expression.signed_term, file);
 			break;
 		case 2:
-			printAddition(simple_expression->simple_expression.addition);
+			printAddition(simple_expression->simple_expression.addition, file);
 			break;
 	}
 }
 
-void printSignedTerm(SignedTerm* signed_term) {
+void printSignedTerm(SignedTerm* signed_term, FILE* file) {
 	printf("SignedTerm\n");
 	printf("%d\n", signed_term->sign);
-	printTerm(signed_term->term);
+
+	char sign = (signed_term->sign == 0) ? '+' : '-';
+	fprintf(file, "%c", sign);
+	printTerm(signed_term->term, file);
 }
 
-void printAddition(Addition* addition) {
+void printAddition(Addition* addition, FILE* file) {
 	printf("Addition\n");
-	printSimpleExpression(addition->simple_expression);
+
+	printSimpleExpression(addition->simple_expression, file);
+
 	printf("%d\n", addition->addop);
-	printTerm(addition->term);
+
+	char* addop;
+	switch (addition->addop) {
+		case 0:
+			addop = "+";
+			break;
+		case 1:
+			addop = "-";
+			break;
+		case 2:
+			addop = "||";
+			break;
+	}
+
+	fprintf(file, " %s ", addop);
+
+	printTerm(addition->term, file);
 }
 
-void printTerm(Term* term) {
+void printTerm(Term* term, FILE* file) {
 	printf("Term\n");
 	switch (term->node_type) {
 		case 0:
-			printFactor(term->term.factor);
+			printFactor(term->term.factor, file);
 			break;
 		case 1:
-			printMultiplication(term->term.multiplication);
+			printMultiplication(term->term.multiplication, file);
 			break;
 	}
 }
 
-void printMultiplication(Multiplication* multiplication) {
+void printMultiplication(Multiplication* multiplication, FILE* file) {
 	printf("Multiplication\n");
 	printf("%d\n", multiplication->mulop);
-	printFactor(multiplication->factor);
-	printTerm(multiplication->term);
+
+	printTerm(multiplication->term, file);
+	
+	char* mulop;
+	switch (multiplication->mulop) {
+		case 0:
+			mulop = "*";
+			break;
+		case 1:
+		case 2:
+			mulop = "/";
+			break;
+		case 3:
+			mulop = "%";
+			break;
+		case 4:
+			mulop = "&&";
+			break;
+	}
+	fprintf(file, " %s ", mulop);
+
+	printFactor(multiplication->factor, file);
 }
 
-void printFactor(Factor* factor) {
+void printFactor(Factor* factor, FILE* file) {
 	printf("Factor: %d\n", factor->node_type);
 	switch (factor->node_type) {
 		case 0:
-			printFactorExpressionList(factor->factor.expression_list);
+			printFactorExpressionList(factor->factor.expression_list, file);
 			break;
 		case 1:
-			//printVariable(factor->factor.variable);
+			printVariable(factor->factor.variable, file);
 			break;
 		case 2:
-			printf("%d\n", factor->factor.integer);
+			fprintf(file, "%d", factor->factor.integer);
 			break;
 		case 3:
-			printf("%f\n", factor->factor.real);
+			fprintf(file, "%f", factor->factor.real);
 			break;
 		case 4:
-			printExpression(factor->factor.expression);
+			printExpression(factor->factor.expression, file);
 			break;
 		case 5:
-			printFactor(factor->factor.factor);
+			fprintf(file, "!");
+			printFactor(factor->factor.factor, file);
 			break;
 	}
 }
 
-void printFactorExpressionList(FactorExpressionList* expression_list) {
+void printFactorExpressionList(FactorExpressionList* expression_list, FILE* file) {
 	printf("FactorExpressionList\n");
 	printf("%s\n", expression_list->identifier);
-	printExpressionList(expression_list->expression_list);
+
+	fprintf(file, "%s(", expression_list->identifier);
+	printExpressionList(expression_list->expression_list, file);
+	fprintf(file, ")");
 }
