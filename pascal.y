@@ -292,6 +292,30 @@ statement: variable ASSIGN expression {
 				statement->statement.for_to->statement = $8;
 				$$ = statement;
 			}
+		| WRITE LPAREN IDENTIFIER RPAREN {
+				Statement* statement = (Statement*)malloc(sizeof(Statement));
+				statement->node_type = 6;
+				statement->statement.identifier = $3;
+				$$ = statement;
+			}
+		| READ LPAREN IDENTIFIER RPAREN {
+				Statement* statement = (Statement*)malloc(sizeof(Statement));
+				statement->node_type = 7;
+				statement->statement.identifier = $3;
+				$$ = statement;
+			}
+		| WRITELN LPAREN IDENTIFIER RPAREN {
+				Statement* statement = (Statement*)malloc(sizeof(Statement));
+				statement->node_type = 8;
+				statement->statement.identifier = $3;
+				$$ = statement;
+			}
+		| READLN LPAREN IDENTIFIER RPAREN {
+				Statement* statement = (Statement*)malloc(sizeof(Statement));
+				statement->node_type = 9;
+				statement->statement.identifier = $3;
+				$$ = statement;
+			}
 ;
 
 elseclause: %empty { $$ = NULL; }

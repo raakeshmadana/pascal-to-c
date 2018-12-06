@@ -443,6 +443,18 @@ void printStatement(Statement* statement, FILE* file) {
 			case 5:
 				printForTo(statement->statement.for_to, file);
 				break;
+			case 6:
+				printWrite(statement->statement.identifier, file);
+				break;
+			case 7:
+				printRead(statement->statement.identifier, file);
+				break;
+			case 8:
+				printWriteln(statement->statement.identifier, file);
+				break;
+			case 9:
+				printReadln(statement->statement.identifier, file);
+				break;
 		}
 	}
 }
@@ -498,6 +510,70 @@ void printForTo(ForTo* for_to, FILE* file) {
 	printStatement(for_to->statement, file);
 
 	fprintf(file, "}\n");
+}
+
+void printWrite(char* identifier, FILE* file) {
+	// Determine the datatype of the variable to be printed
+	SymbolTable* s = NULL;
+	char print_verb;
+	HASH_FIND_STR(symbols, identifier, s);
+	if (s) {
+		if (s->attributes.data_type == 0) {
+			print_verb = 'd';
+		} else {
+			print_verb = 'f';
+		}
+	}
+
+	fprintf(file, "printf(\"%%%c\", %s);\n", print_verb, identifier);
+}
+
+void printRead(char* identifier, FILE* file) {
+	// Determine the datatype of the variable to be scanned
+	SymbolTable* s = NULL;
+	char scan_verb;
+	HASH_FIND_STR(symbols, identifier, s);
+	if (s) {
+		if (s->attributes.data_type == 0) {
+			scan_verb = 'd';
+		} else {
+			scan_verb = 'f';
+		}
+	}
+
+	fprintf(file, "scanf(\"%%%c\", &%s);\n", scan_verb, identifier);
+}
+
+void printWriteln(char* identifier, FILE* file) {
+	// Determine the datatype of the variable to be printed
+	SymbolTable* s = NULL;
+	char print_verb;
+	HASH_FIND_STR(symbols, identifier, s);
+	if (s) {
+		if (s->attributes.data_type == 0) {
+			print_verb = 'd';
+		} else {
+			print_verb = 'f';
+		}
+	}
+
+	fprintf(file, "printf(\"%%%c\\n\", %s);\n", print_verb, identifier);
+}
+
+void printReadln(char* identifier, FILE* file) {
+	// Determine the datatype of the variable to be scanned
+	SymbolTable* s = NULL;
+	char scan_verb;
+	HASH_FIND_STR(symbols, identifier, s);
+	if (s) {
+		if (s->attributes.data_type == 0) {
+			scan_verb = 'd';
+		} else {
+			scan_verb = 'f';
+		}
+	}
+
+	fprintf(file, "scanf(\"%%%c\\n\", &%s);\n", scan_verb, identifier);
 }
 
 void printVariable(Variable* variable, FILE* file) {
@@ -665,8 +741,6 @@ void printTerm(Term* term, FILE* file) {
 void printMultiplication(Multiplication* multiplication, FILE* file) {
 	printf("Multiplication\n");
 	printf("%d\n", multiplication->mulop);
-
-	printTerm(multiplication->term, file);
 	
 	char* mulop;
 	switch (multiplication->mulop) {
@@ -674,6 +748,7 @@ void printMultiplication(Multiplication* multiplication, FILE* file) {
 			mulop = "*";
 			break;
 		case 1:
+			fprintf(file, "(float) ");
 		case 2:
 			mulop = "/";
 			break;
@@ -684,6 +759,9 @@ void printMultiplication(Multiplication* multiplication, FILE* file) {
 			mulop = "&&";
 			break;
 	}
+
+	printTerm(multiplication->term, file);
+
 	fprintf(file, " %s ", mulop);
 
 	printFactor(multiplication->factor, file);
