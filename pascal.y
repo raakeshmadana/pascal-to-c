@@ -96,11 +96,11 @@ program: PROGRAM IDENTIFIER SEMICOLON declarations subdeclarations compoundstate
 			program->compound_statement = $6;
 			$$ = program;
 
+			// Adds the program name to the symbol table
 			addProgramName($2);
 
 			if (error == 0) {
-				printSymbols();
-				printTree(program);
+				genCode(program);
 			}
 		}
 ;
@@ -132,6 +132,7 @@ declarations: %empty { $$ = NULL; }
 					declarations->next = $1;
 					$$ = declarations;
 
+					// Checks for redeclarations before adding the identifiers to the symbol table
 					IdentifierList* temp = $3;
 					while(temp != NULL) {
 						SymbolTable* s = NULL;
@@ -201,8 +202,15 @@ subprogramhead: FUNCTION IDENTIFIER arguments COLON standardtype SEMICOLON {
 						subprogram_head->subprogram_head.function_rule->standard_type = $5;
 						$$ = subprogram_head;
 						
-						int err = addFunction($2, $3, $5, yylineno);
-						error = error ? error : err;
+						// Checks for redeclaration before adding to the symbol table
+						SymbolTable* s = NULL;
+						s = isDeclared($2);
+						if (s) {
+							printf("%d: %s Re-declared\n", yylineno, s->symbol);
+						} else {
+							int err = addFunction($2, $3, $5, yylineno);
+							error = error ? error : err;
+						}
 					}
 			  | PROCEDURE IDENTIFIER arguments SEMICOLON {
 						SubprogramHead* subprogram_head = (SubprogramHead*)malloc(sizeof(SubprogramHead));
@@ -212,8 +220,15 @@ subprogramhead: FUNCTION IDENTIFIER arguments COLON standardtype SEMICOLON {
 						subprogram_head->subprogram_head.procedure_rule->arguments = $3;
 						$$ = subprogram_head;
 
-						int err = addProcedure($2, $3, yylineno);
-						error = error ? error : err;
+						// Checks for redeclaration before adding to the symbol table
+						SymbolTable* s = NULL;
+						s = isDeclared($2);
+						if (s) {
+							printf("%d: %s Re-declared\n", yylineno, s->symbol);
+						} else {
+							int err = addProcedure($2, $3, yylineno);
+							error = error ? error : err;
+						}
 					}
 ;
 
@@ -307,6 +322,7 @@ statement: variable ASSIGN expression {
 				statement->statement.for_to->statement = $8;
 				$$ = statement;
 				
+				// Checks if the variable is undeclared or if it is not a variable
 				SymbolTable *s = NULL;
 				s = isDeclared($2);
 				if (s == NULL) {
@@ -321,24 +337,64 @@ statement: variable ASSIGN expression {
 				statement->node_type = 6;
 				statement->statement.identifier = $3;
 				$$ = statement;
+
+				// Checks if the variable is undeclared or if it is not a variable
+				SymbolTable *s = NULL;
+				s = isDeclared($3);
+				if (s == NULL) {
+					printf("%d: Undeclared variable %s\n", yylineno, $3);
+					error = 1;
+				} else if (s->type != kVariable) {
+					printf("%d: %s is not a variable\n", yylineno, $3);
+				}
 			}
 		| READ LPAREN IDENTIFIER RPAREN {
 				Statement* statement = (Statement*)malloc(sizeof(Statement));
 				statement->node_type = 7;
 				statement->statement.identifier = $3;
 				$$ = statement;
+
+				// Checks if the variable is undeclared or if it is not a variable
+				SymbolTable *s = NULL;
+				s = isDeclared($3);
+				if (s == NULL) {
+					printf("%d: Undeclared variable %s\n", yylineno, $3);
+					error = 1;
+				} else if (s->type != kVariable) {
+					printf("%d: %s is not a variable\n", yylineno, $3);
+				}
 			}
 		| WRITELN LPAREN IDENTIFIER RPAREN {
 				Statement* statement = (Statement*)malloc(sizeof(Statement));
 				statement->node_type = 8;
 				statement->statement.identifier = $3;
 				$$ = statement;
+
+				// Checks if the variable is undeclared or if it is not a variable
+				SymbolTable *s = NULL;
+				s = isDeclared($3);
+				if (s == NULL) {
+					printf("%d: Undeclared variable %s\n", yylineno, $3);
+					error = 1;
+				} else if (s->type != kVariable) {
+					printf("%d: %s is not a variable\n", yylineno, $3);
+				}
 			}
 		| READLN LPAREN IDENTIFIER RPAREN {
 				Statement* statement = (Statement*)malloc(sizeof(Statement));
 				statement->node_type = 9;
 				statement->statement.identifier = $3;
 				$$ = statement;
+
+				// Checks if the variable is undeclared or if it is not a variable
+				SymbolTable *s = NULL;
+				s = isDeclared($3);
+				if (s == NULL) {
+					printf("%d: Undeclared variable %s\n", yylineno, $3);
+					error = 1;
+				} else if (s->type != kVariable) {
+					printf("%d: %s is not a variable\n", yylineno, $3);
+				}
 			}
 ;
 
@@ -352,6 +408,7 @@ variable: IDENTIFIER {
 				variable->variable.identifier = $1;
 				$$ = variable;
 				
+				// Checks if the variable is undeclared
 				SymbolTable *s = NULL;
 				s = isDeclared($1);
 				if (s == NULL) {
@@ -367,6 +424,7 @@ variable: IDENTIFIER {
 				variable->variable.expression->expression = $3;
 				$$ = variable;
 				
+				// Checks if the variable is undeclared or if it is an array
 				SymbolTable *s = NULL;
 				s = isDeclared($1);
 				if (s == NULL) {
@@ -387,6 +445,7 @@ procstatement: IDENTIFIER {
 					proc_statement->proc_statement.identifier = $1;
 					$$ = proc_statement;
 
+					// Checks if the function is undeclared
 					SymbolTable *s = NULL;
 					s = isDeclared($1);
 					if (s == NULL) {
@@ -402,6 +461,7 @@ procstatement: IDENTIFIER {
 					proc_statement->proc_statement.expression_list->expression_list = $3;
 					$$ = proc_statement;
 
+					// Checks if the function or procedure is undeclared
 					SymbolTable *s = NULL;
 					s = isDeclared($1);
 					if (s == NULL) {
@@ -411,6 +471,7 @@ procstatement: IDENTIFIER {
 						printf("%d: %s is not a function or a procedure\n", yylineno, $1);
 						error = 1;
 					} else {
+						// Checks if the function call has too few/many parameters
 						char* type = s->type == kFunction ? "function" : "procedure";
 
 						ExpressionList* temp = $3;
@@ -534,6 +595,33 @@ factor: IDENTIFIER LPAREN expressionlist RPAREN {
 			factor->factor.expression_list->identifier = $1;
 			factor->factor.expression_list->expression_list = $3;
 			$$ = factor;
+
+			// Checks if the function or procedure is undeclared
+			SymbolTable *s = NULL;
+			s = isDeclared($1);
+			if (s == NULL) {
+				printf("%d: Undeclared function %s\n", yylineno, $1);
+				error = 1;
+			} else if (s->type != kFunction && s->type != kProcedure) {
+				printf("%d: %s is not a function or a procedure\n", yylineno, $1);
+				error = 1;
+			} else {
+				// Checks if the function call has too few/many parameters
+				char* type = s->type == kFunction ? "function" : "procedure";
+
+				ExpressionList* temp = $3;
+				int num_arguments = 0;
+				while (temp != NULL) {
+					num_arguments++;
+					temp = temp->next;
+				}
+
+				if(utarray_len(s->attributes.function->arguments_type) < num_arguments) {
+					printf("%d: Too few parameters in call to the %s %s\n", yylineno, type, s->symbol);
+				} else if(utarray_len(s->attributes.function->arguments_type) > num_arguments) {
+					printf("%d: Too many parameters in call to the %s %s\n", yylineno, type, s->symbol);
+				}
+			}
 		}
 	  | variable {
 			Factor* factor = (Factor*)malloc(sizeof(Factor));

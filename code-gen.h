@@ -27,6 +27,7 @@ typedef struct Function {
 	int return_type;
 } Function;
 
+// Structure of the symbol table
 typedef struct SymbolTable {
 	char* symbol;
 	SymbolType type;
@@ -39,48 +40,47 @@ typedef struct SymbolTable {
 	UT_hash_handle hh;
 } SymbolTable;
 
-void addProgramName(char* symbol);
-void addVariable(char* symbol, Type* type);
-int addProcedure(char* symbol, ParameterList* arguments, int linenum);
-int addFunction(char* symbol, ParameterList* arguments, int return_type, int linenum);
+// Routines to add symbols to symbol table
+void addProgramName(char*);
+void addVariable(char*, Type*);
+int addProcedure(char*, ParameterList*, int);
+int addFunction(char*, ParameterList*, int, int);
 void printSymbols();
 
+// Error check helpers
 SymbolTable* isDeclared(char*);
 int checkExpression(char*, Expression*, int);
 
-void printTree(Program*);
-void printIdentifierList(IdentifierList*);
-void printDeclarations(Declarations*, FILE*);
-void printType(Type*);
-void printArrayType(ArrayType*);
-void printSubDeclarations(SubDeclarations*);
-void printSubprogDeclaration(SubprogDeclaration*);
-void printSubprogramHead(SubprogramHead*);
-void printFunction(FunctionRule*);
-void printProcedure(ProcedureRule*);
-void printArguments(ParameterList*, FILE*, FILE*);
-void printParameterList(ParameterList*);
-void printCompoundStatement(StatementList*, FILE*);
-void printStatement(Statement*, FILE*);
-void printAssignment(Assignment*, FILE*);
-void printIfThen(IfThen*, FILE*);
-void printWhileDo(WhileDo*, FILE*);
-void printForTo(ForTo*, FILE*);
-void printRead(char*, FILE*);
-void printWrite(char*, FILE*);
-void printReadln(char*, FILE*);
-void printWriteln(char*, FILE*);
-void printVariable(Variable*, FILE*);
-void printVariableExpression(VariableExpression*, FILE*);
-void printProcStatement(ProcStatement*, FILE*);
-void printProcStatementExpressionList(ProcStatementExpressionList*, FILE*);
-void printExpressionList(ExpressionList*, FILE*);
-void printExpression(Expression*, FILE*);
-void printRelationalExpression(RelationalExpression*, FILE*);
-void printSimpleExpression(SimpleExpression*, FILE*);
-void printSignedTerm(SignedTerm*, FILE*);
-void printAddition(Addition*, FILE*);
-void printTerm(Term*, FILE*);
-void printMultiplication(Multiplication*, FILE*);
-void printFactor(Factor*, FILE*);
-void printFactorExpressionList(FactorExpressionList*, FILE*);
+// Code generation routines
+void genCode(Program*);
+void genCodeDeclarations(Declarations*, FILE*);
+void genCodeSubDeclarations(SubDeclarations*);
+void genCodeSubprogDeclaration(SubprogDeclaration*);
+void genCodeSubprogramHead(SubprogramHead*);
+void genCodeFunction(FunctionRule*);
+void genCodeProcedure(ProcedureRule*);
+void genCodeArguments(ParameterList*, FILE*, FILE*);
+void genCodeCompoundStatement(StatementList*, FILE*);
+void genCodeStatement(Statement*, FILE*);
+void genCodeAssignment(Assignment*, FILE*);
+void genCodeIfThen(IfThen*, FILE*);
+void genCodeWhileDo(WhileDo*, FILE*);
+void genCodeForTo(ForTo*, FILE*);
+void genCodeRead(char*, FILE*);
+void genCodeWrite(char*, FILE*);
+void genCodeReadln(char*, FILE*);
+void genCodeWriteln(char*, FILE*);
+void genCodeVariable(Variable*, FILE*);
+void genCodeVariableExpression(VariableExpression*, FILE*);
+void genCodeProcStatement(ProcStatement*, FILE*);
+void genCodeProcStatementExpressionList(ProcStatementExpressionList*, FILE*);
+void genCodeExpressionList(ExpressionList*, FILE*);
+void genCodeExpression(Expression*, FILE*);
+void genCodeRelationalExpression(RelationalExpression*, FILE*);
+void genCodeSimpleExpression(SimpleExpression*, FILE*);
+void genCodeSignedTerm(SignedTerm*, FILE*);
+void genCodeAddition(Addition*, FILE*);
+void genCodeTerm(Term*, FILE*);
+void genCodeMultiplication(Multiplication*, FILE*);
+void genCodeFactor(Factor*, FILE*);
+void genCodeFactorExpressionList(FactorExpressionList*, FILE*);

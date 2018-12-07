@@ -5,6 +5,7 @@
 
 SymbolTable* symbols = NULL;
 
+// Adds the program name to the symbol table
 void addProgramName(char* symbol) {
 	SymbolTable *s = (SymbolTable*)malloc(sizeof(SymbolTable));
 	s->symbol = symbol;
@@ -12,6 +13,7 @@ void addProgramName(char* symbol) {
 	HASH_ADD_KEYPTR(hh,	symbols, s->symbol, strlen(s->symbol), s);
 }
 
+// Add variables and arrays to the symbol table
 void addVariable(char* symbol, Type* type) {
 	SymbolTable *s = (SymbolTable*)malloc(sizeof(SymbolTable));
 	s->symbol = symbol;
@@ -34,6 +36,8 @@ void addVariable(char* symbol, Type* type) {
 	HASH_ADD_KEYPTR(hh,	symbols, s->symbol, strlen(s->symbol), s);
 }
 
+// Adds the type of arguments (variable or array) and the data type of the arguments
+// to the attributes of the procedure in the symbol table
 void addProcedureAttributes(Procedure* procedure, Type* type) {
 	utarray_push_back(procedure->arguments_type, &type->node_type);
 
@@ -47,14 +51,8 @@ void addProcedureAttributes(Procedure* procedure, Type* type) {
 	}
 }
 
+// Adds the procedure to the symbol table
 int addProcedure(char* symbol, ParameterList* arguments, int linenum) {
-	SymbolTable *check = NULL;
-	check = isDeclared(symbol);
-	if (check) {
-		printf("%d: %s Re-declared\n", linenum, symbol);
-		return 1;
-	}
-
 	int err = 0;
 
 	SymbolTable *s = (SymbolTable*)malloc(sizeof(SymbolTable));
@@ -67,6 +65,8 @@ int addProcedure(char* symbol, ParameterList* arguments, int linenum) {
 	while(arguments != NULL) {
 		IdentifierList* temp = arguments->identifier_list;
 		while(temp != NULL) {
+			// Checks if the arguments are already in the symbol table
+			SymbolTable* check = NULL;
 			check = isDeclared(temp->identifier);
 			if (check) {
 				printf("%d: %s Re-declared\n", linenum, check->symbol);
@@ -86,6 +86,8 @@ int addProcedure(char* symbol, ParameterList* arguments, int linenum) {
 	return err;
 }
 
+// Adds the type of arguments (variable or array) and the data type of the arguments
+// to the attributes of the function in the symbol table
 void addFunctionAttributes(Function* function, Type* type, int return_type) {
 	utarray_push_back(function->arguments_type, &type->node_type);
 
@@ -101,14 +103,8 @@ void addFunctionAttributes(Function* function, Type* type, int return_type) {
 	function->return_type = return_type;
 }
 
+// Adds the procedure to the symbol table
 int addFunction(char* symbol, ParameterList* arguments, int return_type, int linenum) {
-	SymbolTable *check = NULL;
-	check = isDeclared(symbol);
-	if (check) {
-		printf("%d: %s Re-declared\n", linenum, symbol);
-		return 1;
-	}
-
 	int err = 0;
 
 	SymbolTable *s = (SymbolTable*)malloc(sizeof(SymbolTable));
@@ -121,6 +117,8 @@ int addFunction(char* symbol, ParameterList* arguments, int return_type, int lin
 	while(arguments != NULL) {
 		IdentifierList* temp = arguments->identifier_list;
 		while(temp != NULL) {
+			// Checks if the arguments are already in the symbol table
+			SymbolTable* check;
 			check = isDeclared(temp->identifier);
 			if (check) {
 				printf("%d: %s Re-declared\n", linenum, check->symbol);
@@ -140,12 +138,16 @@ int addFunction(char* symbol, ParameterList* arguments, int return_type, int lin
 	return err;
 }
 
+// Gets the attributes of the symbol from the symbol table.
+// Returns NULL if the symbol is not present.
 SymbolTable* isDeclared(char* identifier) {
 	SymbolTable* s = NULL;
 	HASH_FIND_STR(symbols, identifier, s);
 	return s;
 }
 
+// Checks if the expression inside the array's subscript is a number.
+// If it is a number, checks if it is out of bounds or a real number 
 int checkExpression(char* identifier, Expression* expression, int linenum) {
 	int err = 0;
 
@@ -176,6 +178,7 @@ int checkExpression(char* identifier, Expression* expression, int linenum) {
 	return err;
 }
 
+// Prints all the symbols in the symbol table
 void printSymbols() {
 	SymbolTable *s, *temp;
 
@@ -234,27 +237,25 @@ void printSymbols() {
 	printf("***********************\n");
 }
 
-void printTree(Program* program) {
-	//printf("%s\n", program->identifier);
-	// Determine file name
+// Begins generating code
+void genCode(Program* program) {
+	// Uses the program name as the main file name
 	char *file = (char*)malloc(strlen(program->identifier) + 1 + 2);
 	strcpy(file, program->identifier);
 	strcat(file, ".c");
 	FILE* main = fopen(file, "a");
 
-	//FILE* main = fopen("main.c", "a");
-
 	// Include headers
 	fprintf(main, "#include <stdio.h>\n");
 	fprintf(main, "#include <stdlib.h>\n\n");
 
-	printDeclarations(program->declarations, main);
+	genCodeDeclarations(program->declarations, main);
 
 	// Write main function
 	fprintf(main, "int main(void) {\n");
 
-	printSubDeclarations(program->sub_declarations);
-	printCompoundStatement(program->compound_statement, main);
+	genCodeSubDeclarations(program->sub_declarations);
+	genCodeCompoundStatement(program->compound_statement, main);
 
 	// Return and close main
 	fprintf(main, "return 0;\n}");
@@ -262,14 +263,8 @@ void printTree(Program* program) {
 	fclose(main);
 }
 
-void printIdentifierList(IdentifierList* identifier_list) {
-	//printf("IdentifierList\n");
-	while (identifier_list != NULL) {
-		//printf("%s\n", identifier_list->identifier);
-		identifier_list = identifier_list->next;
-	}
-}
-void printDeclarations(Declarations* declarations, FILE* file) {
+// Generates variable and array declarations
+void genCodeDeclarations(Declarations* declarations, FILE* file) {
 	while (declarations != NULL) {
 		// Determine data type
 		Type* type = declarations->type;
@@ -316,28 +311,10 @@ void printDeclarations(Declarations* declarations, FILE* file) {
 	}
 }
 
-void printType(Type* type) {
-	//printf("Type\n");
-	switch (type->node_type) {
-		case 0:
-			//printf("StandardType:%d\n", type->type.standard_type);
-			break;
-		case 1:
-			printArrayType(type->type.array_type);
-			break;
-	}
-}
-
-void printArrayType(ArrayType* array_type) {
-	//printf("ArrayType\n");
-	//printf("From:%d\n", array_type->from);
-	//printf("To:%d\n", array_type->to);
-	//printf("StandardType:%d\n", array_type->standard_type);
-	//printf("Exiting ArrayType\n");
-}
-
-void printSubDeclarations(SubDeclarations* sub_declarations) {
-	//printf("SubDeclarations\n");
+// Starts generating function declarations and function definitions
+void genCodeSubDeclarations(SubDeclarations* sub_declarations) {
+	// Generates function prototypes in a header file
+	// Generates function definitions in a separate .c file
 	if(sub_declarations != NULL) {
 		FILE* definitions = fopen("functions.c", "a");
 		fprintf(definitions, "#include \"functions.h\"\n\n");
@@ -345,38 +322,38 @@ void printSubDeclarations(SubDeclarations* sub_declarations) {
 	}
 
 	while (sub_declarations != NULL) {
-		printSubprogDeclaration(sub_declarations->subprog_declaration);
+		genCodeSubprogDeclaration(sub_declarations->subprog_declaration);
 		sub_declarations = sub_declarations->next;
 	}
 }
 
-void printSubprogDeclaration(SubprogDeclaration* subprog_declaration) {
-	//printf("SubprogDeclaration\n");
-	printSubprogramHead(subprog_declaration->subprogram_head);
+void genCodeSubprogDeclaration(SubprogDeclaration* subprog_declaration) {
+	genCodeSubprogramHead(subprog_declaration->subprogram_head);
 
 	FILE* definitions = fopen("functions.c", "a");
-	printDeclarations(subprog_declaration->declarations, definitions);
+	genCodeDeclarations(subprog_declaration->declarations, definitions);
 
-	printCompoundStatement(subprog_declaration->compound_statement, definitions);
+	genCodeCompoundStatement(subprog_declaration->compound_statement, definitions);
 
 	fprintf(definitions, "}\n\n");
 
 	fclose(definitions);
 }
 
-void printSubprogramHead(SubprogramHead* subprogram_head) {
-	//printf("SubprogramHead\n");
+// Generate function and procedure declarations
+void genCodeSubprogramHead(SubprogramHead* subprogram_head) {
 	switch (subprogram_head->node_type) {
 		case 0:
-			printFunction(subprogram_head->subprogram_head.function_rule);
+			genCodeFunction(subprogram_head->subprogram_head.function_rule);
 			break;
 		case 1:
-			printProcedure(subprogram_head->subprogram_head.procedure_rule);
+			genCodeProcedure(subprogram_head->subprogram_head.procedure_rule);
 			break;
 	}
 }
 
-void printArguments(ParameterList* arguments, FILE* prototypes, FILE* definitions) {
+// Generate arguments of functions and procedures
+void genCodeArguments(ParameterList* arguments, FILE* prototypes, FILE* definitions) {
 	while(arguments != NULL) {
 		IdentifierList* temp = arguments->identifier_list;
 		Type* type = arguments->type;
@@ -430,12 +407,8 @@ void printArguments(ParameterList* arguments, FILE* prototypes, FILE* definition
 	fprintf(definitions, ") {\n");
 }
 
-void printFunction(FunctionRule* function_rule) {
-	//printf("Function\n");
-	//printf("%s\n", function_rule->identifier);
-	printParameterList(function_rule->arguments);
-	//printf("%d\n", function_rule->standard_type);
-
+// Generates function declarations
+void genCodeFunction(FunctionRule* function_rule) {
 	FILE *prototypes, *definitions;
 	prototypes = fopen("functions.h", "a");
 	definitions = fopen("functions.c", "a");
@@ -444,20 +417,17 @@ void printFunction(FunctionRule* function_rule) {
 	char *return_type = (function_rule->standard_type == 0) ? "int" : "float";
 	fprintf(prototypes, "%s ", return_type);
 	fprintf(definitions, "%s ", return_type);
+
 	fprintf(prototypes, "%s(", function_rule->identifier);
 	fprintf(definitions, "%s(", function_rule->identifier);
 
-	printArguments(function_rule->arguments, prototypes, definitions);
+	genCodeArguments(function_rule->arguments, prototypes, definitions);
 
 	fclose(prototypes);
 	fclose(definitions);
 }
 
-void printProcedure(ProcedureRule* procedure_rule) {
-	//printf("Procedure\n");
-	//printf("%s\n", procedure_rule->identifier);
-	printParameterList(procedure_rule->arguments);
-
+void genCodeProcedure(ProcedureRule* procedure_rule) {
 	FILE *prototypes, *definitions;
 	prototypes = fopen("functions.h", "a");
 	definitions = fopen("functions.c", "a");
@@ -465,132 +435,124 @@ void printProcedure(ProcedureRule* procedure_rule) {
 	// Procedures don't return
 	fprintf(prototypes, "void ");
 	fprintf(definitions, "void ");
+
 	fprintf(prototypes, "%s(", procedure_rule->identifier);
 	fprintf(definitions, "%s(", procedure_rule->identifier);
 
-	printArguments(procedure_rule->arguments, prototypes, definitions);
+	genCodeArguments(procedure_rule->arguments, prototypes, definitions);
 
 	fclose(prototypes);
 	fclose(definitions);
 }
 
-void printParameterList(ParameterList* parameter_list) {
-	//printf("ParameterList\n");
-	while (parameter_list != NULL) {
-		printIdentifierList(parameter_list->identifier_list);
-		printType(parameter_list->type);
-		parameter_list = parameter_list->next;
-	}
-}
-
-void printCompoundStatement(StatementList* statement_list, FILE* file) {
-	//printf("CompoundStatement\n");
+// Generates compound statements
+void genCodeCompoundStatement(StatementList* statement_list, FILE* file) {
 	while (statement_list != NULL) {
-		printStatement(statement_list->statement, file);
+		genCodeStatement(statement_list->statement, file);
 		statement_list = statement_list->next;
 	}
 }
 
-void printStatement(Statement* statement, FILE* file) {
-	//printf("Statement: %d\n", statement->node_type);
+// Generate statements
+void genCodeStatement(Statement* statement, FILE* file) {
 	if (statement != NULL) {
 		switch (statement->node_type) {
 			case 0:
-				printAssignment(statement->statement.assignment, file);
+				genCodeAssignment(statement->statement.assignment, file);
 				break;
 			case 1:
-				printProcStatement(statement->statement.proc_statement, file);
+				genCodeProcStatement(statement->statement.proc_statement, file);
 				break;
 			case 2:
-				printCompoundStatement(statement->statement.compound_statement, file);
+				genCodeCompoundStatement(statement->statement.compound_statement, file);
 				break;
 			case 3:
-				printIfThen(statement->statement.if_then, file);
+				genCodeIfThen(statement->statement.if_then, file);
 				break;
 			case 4:
-				printWhileDo(statement->statement.while_do, file);
+				genCodeWhileDo(statement->statement.while_do, file);
 				break;
 			case 5:
-				printForTo(statement->statement.for_to, file);
+				genCodeForTo(statement->statement.for_to, file);
 				break;
 			case 6:
-				printWrite(statement->statement.identifier, file);
+				genCodeWrite(statement->statement.identifier, file);
 				break;
 			case 7:
-				printRead(statement->statement.identifier, file);
+				genCodeRead(statement->statement.identifier, file);
 				break;
 			case 8:
-				printWriteln(statement->statement.identifier, file);
+				genCodeWriteln(statement->statement.identifier, file);
 				break;
 			case 9:
-				printReadln(statement->statement.identifier, file);
+				genCodeReadln(statement->statement.identifier, file);
 				break;
 		}
 	}
 }
 
-void printAssignment(Assignment* assignment, FILE* file) {
-	//printf("Assignment\n");
+// Generates assignment statements
+void genCodeAssignment(Assignment* assignment, FILE* file) {
+	// If the left hand side contains a function name
+	// generate return statement
 	SymbolTable* s = NULL;
 	HASH_FIND_STR(symbols, assignment->variable->variable.identifier, s);
 	if (s) {
 		if (s->type == kFunction) {
 			fprintf(file, "return ");
 		} else {
-			printVariable(assignment->variable, file);
+			genCodeVariable(assignment->variable, file);
 			fprintf(file, " = ");
 		}
 	}
 
-	printExpression(assignment->expression, file);
+	genCodeExpression(assignment->expression, file);
 	fprintf(file, ";\n");
 }
 
-void printIfThen(IfThen* if_then, FILE* file) {
-	//printf("IfThen\n");
-
+// Generates if statements
+void genCodeIfThen(IfThen* if_then, FILE* file) {
 	fprintf(file, "if (");
-	printExpression(if_then->expression, file);
+	genCodeExpression(if_then->expression, file);
 	fprintf(file, ") {\n");
 
-	printStatement(if_then->statement, file);
+	genCodeStatement(if_then->statement, file);
 	fprintf(file, "}");
 
 	if(if_then->else_clause != NULL) {
 		fprintf(file, " else {\n");
-		printStatement(if_then->else_clause, file);
+		genCodeStatement(if_then->else_clause, file);
 		fprintf(file, "}\n");
 	} else {
 		fprintf(file, "\n");
 	}
 }
 
-void printWhileDo(WhileDo* while_do, FILE* file) {
-	//printf("WhileDo\n");
+// Generates while loops
+void genCodeWhileDo(WhileDo* while_do, FILE* file) {
 	fprintf(file, "while (");
-	printExpression(while_do->expression, file);
+	genCodeExpression(while_do->expression, file);
 	fprintf(file, ") {\n");
-	printStatement(while_do->statement, file);
+	genCodeStatement(while_do->statement, file);
 	fprintf(file, "}\n");
 }
 
-void printForTo(ForTo* for_to, FILE* file) {
-	//printf("ForTo\n");
-	//printf("%s\n", for_to->identifier);
-
+// Generates for loops
+void genCodeForTo(ForTo* for_to, FILE* file) {
 	fprintf(file, "for (%s = ", for_to->identifier);
-	printExpression(for_to->expression1, file);
+	genCodeExpression(for_to->expression1, file);
 
 	fprintf(file, "; %s < ", for_to->identifier);
-	printExpression(for_to->expression2, file);
+	genCodeExpression(for_to->expression2, file);
 	fprintf(file, "; %s++) {\n", for_to->identifier);
 
-	printStatement(for_to->statement, file);
+	genCodeStatement(for_to->statement, file);
 
 	fprintf(file, "}\n");
 }
 
-void printWrite(char* identifier, FILE* file) {
+// Generates printf statements
+void genCodeWrite(char* identifier, FILE* file) {
 	// Determine the datatype of the variable to be printed
 	SymbolTable* s = NULL;
 	char print_verb;
@@ -606,7 +568,8 @@ void printWrite(char* identifier, FILE* file) {
 	fprintf(file, "printf(\"%%%c\", %s);\n", print_verb, identifier);
 }
 
-void printRead(char* identifier, FILE* file) {
+// Generates scanf statements
+void genCodeRead(char* identifier, FILE* file) {
 	// Determine the datatype of the variable to be scanned
 	SymbolTable* s = NULL;
 	char scan_verb;
@@ -622,7 +585,8 @@ void printRead(char* identifier, FILE* file) {
 	fprintf(file, "scanf(\"%%%c\", &%s);\n", scan_verb, identifier);
 }
 
-void printWriteln(char* identifier, FILE* file) {
+// Generates printf statements
+void genCodeWriteln(char* identifier, FILE* file) {
 	// Determine the datatype of the variable to be printed
 	SymbolTable* s = NULL;
 	char print_verb;
@@ -638,7 +602,8 @@ void printWriteln(char* identifier, FILE* file) {
 	fprintf(file, "printf(\"%%%c\\n\", %s);\n", print_verb, identifier);
 }
 
-void printReadln(char* identifier, FILE* file) {
+// Generates scanf statements
+void genCodeReadln(char* identifier, FILE* file) {
 	// Determine the datatype of the variable to be scanned
 	SymbolTable* s = NULL;
 	char scan_verb;
@@ -654,23 +619,20 @@ void printReadln(char* identifier, FILE* file) {
 	fprintf(file, "scanf(\"%%%c\\n\", &%s);\n", scan_verb, identifier);
 }
 
-void printVariable(Variable* variable, FILE* file) {
-	//printf("Variable: %d\n", variable->node_type);
+// Generates variables
+void genCodeVariable(Variable* variable, FILE* file) {
 	switch (variable->node_type) {
 		case 0:
-			//printf("%s\n", variable->variable.identifier);
 			fprintf(file, "%s", variable->variable.identifier);
 			break;
 		case 1:
-			printVariableExpression(variable->variable.expression, file);
+			genCodeVariableExpression(variable->variable.expression, file);
 			break;
 	}
 }
 
-void printVariableExpression(VariableExpression* variable_expression, FILE* file) {
-	//printf("VariableExpression\n");
-	//printf("%s\n", expression->identifier);
-
+// Generates array assignments
+void genCodeVariableExpression(VariableExpression* variable_expression, FILE* file) {
 	fprintf(file, "%s[", variable_expression->identifier);
 	int printed = 0;
 	if (variable_expression->expression->node_type == 0) {
@@ -691,37 +653,35 @@ void printVariableExpression(VariableExpression* variable_expression, FILE* file
 	}
 
 	if (!printed) {
-		printExpression(variable_expression->expression, file);
+		genCodeExpression(variable_expression->expression, file);
 	}
 
 	fprintf(file, "]");
 }
 
-void printProcStatement(ProcStatement* proc_statement, FILE* file) {
-	//printf("ProcStatement\n");
+// Generates function calls
+void genCodeProcStatement(ProcStatement* proc_statement, FILE* file) {
 	switch (proc_statement->node_type) {
 		case 0:
-			//printf("%s\n", proc_statement->proc_statement.identifier);
 			fprintf(file, "%s(", proc_statement->proc_statement.identifier);
 		case 1:
-			printProcStatementExpressionList(proc_statement->proc_statement.expression_list, file);
+			genCodeProcStatementExpressionList(proc_statement->proc_statement.expression_list, file);
 	}
 }
 
-void printProcStatementExpressionList(ProcStatementExpressionList* expression_list, FILE* file) {
-	//printf("ProcStatementExpressionList\n");
-	//printf("%s\n", expression_list->identifier);
+// Generates function calls with arguments
+void genCodeProcStatementExpressionList(ProcStatementExpressionList* expression_list, FILE* file) {
 	fprintf(file, "%s(", expression_list->identifier);
 
-	printExpressionList(expression_list->expression_list, file);
+	genCodeExpressionList(expression_list->expression_list, file);
 
 	fprintf(file, ");\n");
 }
 
-void printExpressionList(ExpressionList* expression_list, FILE* file) {
-	//printf("ExpressionList\n");
+// Generates list of expressions
+void genCodeExpressionList(ExpressionList* expression_list, FILE* file) {
 	while (expression_list != NULL) {
-		printExpression(expression_list->expression, file);
+		genCodeExpression(expression_list->expression, file);
 		if (expression_list->next != NULL) {
 			fprintf(file, ", ");
 		}
@@ -729,26 +689,23 @@ void printExpressionList(ExpressionList* expression_list, FILE* file) {
 	}
 }
 
-void printExpression(Expression* expression, FILE* file) {
-	//printf("Expression: %d\n", expression->node_type);
-
+// Generates expressions
+void genCodeExpression(Expression* expression, FILE* file) {
 	switch(expression->node_type) {
 		case 0:
-			printSimpleExpression(expression->expression.simple_expression, file);
+			genCodeSimpleExpression(expression->expression.simple_expression, file);
 			break;
 		case 1:
-			printRelationalExpression(expression->expression.relation, file);
+			genCodeRelationalExpression(expression->expression.relation, file);
 			break;
 	}
 }
 
-void printRelationalExpression(RelationalExpression* relation, FILE* file) {
-	//printf("RelationalExpression\n");
+// Generates relational expressions
+void genCodeRelationalExpression(RelationalExpression* relation, FILE* file) {
+	genCodeSimpleExpression(relation->simple_expression, file);
 
-	printSimpleExpression(relation->simple_expression, file);
-
-	//printf("%d\n", relation->relop);
-
+	// Determines relational operator
 	char* relop;
 	switch (relation->relop) {
 		case 0:
@@ -773,40 +730,33 @@ void printRelationalExpression(RelationalExpression* relation, FILE* file) {
 
 	fprintf(file, " %s ", relop);
 
-	printExpression(relation->expression, file);
+	genCodeExpression(relation->expression, file);
 }
 
-void printSimpleExpression(SimpleExpression* simple_expression, FILE* file) {
-	//printf("SimpleExpression\n");
+void genCodeSimpleExpression(SimpleExpression* simple_expression, FILE* file) {
 	switch (simple_expression->node_type) {
 		case 0:
-			printTerm(simple_expression->simple_expression.term, file);
+			genCodeTerm(simple_expression->simple_expression.term, file);
 			break;
 		case 1:
-			printSignedTerm(simple_expression->simple_expression.signed_term, file);
+			genCodeSignedTerm(simple_expression->simple_expression.signed_term, file);
 			break;
 		case 2:
-			printAddition(simple_expression->simple_expression.addition, file);
+			genCodeAddition(simple_expression->simple_expression.addition, file);
 			break;
 	}
 }
 
-void printSignedTerm(SignedTerm* signed_term, FILE* file) {
-	//printf("SignedTerm\n");
-	//printf("%d\n", signed_term->sign);
-
+void genCodeSignedTerm(SignedTerm* signed_term, FILE* file) {
 	char sign = (signed_term->sign == 0) ? '+' : '-';
 	fprintf(file, "%c", sign);
-	printTerm(signed_term->term, file);
+	genCodeTerm(signed_term->term, file);
 }
 
-void printAddition(Addition* addition, FILE* file) {
-	//printf("Addition\n");
+void genCodeAddition(Addition* addition, FILE* file) {
+	genCodeSimpleExpression(addition->simple_expression, file);
 
-	printSimpleExpression(addition->simple_expression, file);
-
-	//printf("%d\n", addition->addop);
-
+	// Determines addition operator
 	char* addop;
 	switch (addition->addop) {
 		case 0:
@@ -822,25 +772,22 @@ void printAddition(Addition* addition, FILE* file) {
 
 	fprintf(file, " %s ", addop);
 
-	printTerm(addition->term, file);
+	genCodeTerm(addition->term, file);
 }
 
-void printTerm(Term* term, FILE* file) {
-	//printf("Term\n");
+void genCodeTerm(Term* term, FILE* file) {
 	switch (term->node_type) {
 		case 0:
-			printFactor(term->term.factor, file);
+			genCodeFactor(term->term.factor, file);
 			break;
 		case 1:
-			printMultiplication(term->term.multiplication, file);
+			genCodeMultiplication(term->term.multiplication, file);
 			break;
 	}
 }
 
-void printMultiplication(Multiplication* multiplication, FILE* file) {
-	//printf("Multiplication\n");
-	//printf("%d\n", multiplication->mulop);
-	
+void genCodeMultiplication(Multiplication* multiplication, FILE* file) {
+	// Determines multiplication operator
 	char* mulop;
 	switch (multiplication->mulop) {
 		case 0:
@@ -859,21 +806,20 @@ void printMultiplication(Multiplication* multiplication, FILE* file) {
 			break;
 	}
 
-	printTerm(multiplication->term, file);
+	genCodeTerm(multiplication->term, file);
 
 	fprintf(file, " %s ", mulop);
 
-	printFactor(multiplication->factor, file);
+	genCodeFactor(multiplication->factor, file);
 }
 
-void printFactor(Factor* factor, FILE* file) {
-	//printf("Factor: %d\n", factor->node_type);
+void genCodeFactor(Factor* factor, FILE* file) {
 	switch (factor->node_type) {
 		case 0:
-			printFactorExpressionList(factor->factor.expression_list, file);
+			genCodeFactorExpressionList(factor->factor.expression_list, file);
 			break;
 		case 1:
-			printVariable(factor->factor.variable, file);
+			genCodeVariable(factor->factor.variable, file);
 			break;
 		case 2:
 			fprintf(file, "%d", factor->factor.integer);
@@ -882,20 +828,17 @@ void printFactor(Factor* factor, FILE* file) {
 			fprintf(file, "%f", factor->factor.real);
 			break;
 		case 4:
-			printExpression(factor->factor.expression, file);
+			genCodeExpression(factor->factor.expression, file);
 			break;
 		case 5:
 			fprintf(file, "!");
-			printFactor(factor->factor.factor, file);
+			genCodeFactor(factor->factor.factor, file);
 			break;
 	}
 }
 
-void printFactorExpressionList(FactorExpressionList* expression_list, FILE* file) {
-	//printf("FactorExpressionList\n");
-	//printf("%s\n", expression_list->identifier);
-
+void genCodeFactorExpressionList(FactorExpressionList* expression_list, FILE* file) {
 	fprintf(file, "%s(", expression_list->identifier);
-	printExpressionList(expression_list->expression_list, file);
+	genCodeExpressionList(expression_list->expression_list, file);
 	fprintf(file, ")");
 }
