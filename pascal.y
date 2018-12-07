@@ -6,7 +6,10 @@
 
 extern int yylex();
 extern int yyparse();
+extern int yylineno;
 void yyerror(char const *);
+
+int error = 0;
 %}
 
 %union {
@@ -94,8 +97,10 @@ program: PROGRAM IDENTIFIER SEMICOLON declarations subdeclarations compoundstate
 			$$ = program;
 
 			addProgramName($2);
-			printSymbols();
-			printTree(program);
+			if (!error) {
+				printSymbols();
+				printTree(program);
+			}
 		}
 ;
 
@@ -128,7 +133,14 @@ declarations: %empty { $$ = NULL; }
 
 					IdentifierList* temp = $3;
 					while(temp != NULL) {
-						addVariable(temp->identifier, $5);
+						SymbolTable* s = NULL;
+						s = isDeclared(temp->identifier);
+						if (s) {
+							printf("%d: %s Re-declared\n", yylineno, s->symbol);
+							error = 1;
+						} else {
+							addVariable(temp->identifier, $5);
+						}
 						temp = temp->next;
 					}
 			}
@@ -188,7 +200,7 @@ subprogramhead: FUNCTION IDENTIFIER arguments COLON standardtype SEMICOLON {
 						subprogram_head->subprogram_head.function_rule->standard_type = $5;
 						$$ = subprogram_head;
 						
-						addFunction($2, $3, $5);
+						error = addFunction($2, $3, $5, yylineno);
 					}
 			  | PROCEDURE IDENTIFIER arguments SEMICOLON {
 						SubprogramHead* subprogram_head = (SubprogramHead*)malloc(sizeof(SubprogramHead));
@@ -198,7 +210,7 @@ subprogramhead: FUNCTION IDENTIFIER arguments COLON standardtype SEMICOLON {
 						subprogram_head->subprogram_head.procedure_rule->arguments = $3;
 						$$ = subprogram_head;
 
-						addProcedure($2, $3);
+						error = addProcedure($2, $3, yylineno);
 					}
 ;
 
@@ -291,6 +303,15 @@ statement: variable ASSIGN expression {
 				statement->statement.for_to->expression2 = $6;
 				statement->statement.for_to->statement = $8;
 				$$ = statement;
+				
+				SymbolTable *s = NULL;
+				s = isDeclared($2);
+				if (s == NULL) {
+					printf("%d: Undeclared variable %s\n", yylineno, $2);
+					error = 1;
+				} else if (s->type != kVariable) {
+					printf("%d: %s is not a variable\n", yylineno, $2);
+				}
 			}
 		| WRITE LPAREN IDENTIFIER RPAREN {
 				Statement* statement = (Statement*)malloc(sizeof(Statement));
@@ -327,6 +348,13 @@ variable: IDENTIFIER {
 				variable->node_type = 0;
 				variable->variable.identifier = $1;
 				$$ = variable;
+				
+				SymbolTable *s = NULL;
+				s = isDeclared($1);
+				if (s == NULL) {
+					printf("%d: Undeclared variable %s\n", yylineno, $1);
+					error = 1;
+				}
 			}
 		| IDENTIFIER LSQUARE expression RSQUARE {
 				Variable* variable = (Variable*)malloc(sizeof(Variable));
@@ -335,6 +363,15 @@ variable: IDENTIFIER {
 				variable->variable.expression->identifier = $1;
 				variable->variable.expression->expression = $3;
 				$$ = variable;
+				
+				SymbolTable *s = NULL;
+				s = isDeclared($1);
+				if (s == NULL) {
+					printf("%d: Undeclared variable %s\n", yylineno, $1);
+					error = 1;
+				} else if (s->type != kArray) {
+					printf("%d: %s is not an array\n", yylineno, $1);
+				}
 			}
 ;
 
@@ -343,6 +380,13 @@ procstatement: IDENTIFIER {
 					proc_statement->node_type = 0;
 					proc_statement->proc_statement.identifier = $1;
 					$$ = proc_statement;
+
+					SymbolTable *s = NULL;
+					s = isDeclared($1);
+					if (s == NULL) {
+						printf("%d: Undeclared function %s\n", yylineno, $1);
+						error = 1;
+					}
 				}
 			 | IDENTIFIER LPAREN expressionlist RPAREN {
 					ProcStatement* proc_statement = (ProcStatement*)malloc(sizeof(ProcStatement));
@@ -351,6 +395,29 @@ procstatement: IDENTIFIER {
 					proc_statement->proc_statement.expression_list->identifier = $1;
 					proc_statement->proc_statement.expression_list->expression_list = $3;
 					$$ = proc_statement;
+
+					SymbolTable *s = NULL;
+					s = isDeclared($1);
+					if (s == NULL) {
+						printf("%d: Undeclared function %s\n", yylineno, $1);
+						error = 1;
+					} else if (s->type != kFunction) {
+						printf("%d: %s is not a function\n", yylineno, $1);
+						error = 1;
+					} else {
+						ExpressionList* temp = $3;
+						int num_arguments = 0;
+						while (temp != NULL) {
+							num_arguments++;
+							temp = temp->next;
+						}
+
+						if(utarray_len(s->attributes.function->arguments_type) < num_arguments) {
+							printf("%d: Too few parameters in call to the function %s\n", yylineno, s->symbol);
+						} else if(utarray_len(s->attributes.function->arguments_type) > num_arguments) {
+							printf("%d: Too many parameters in call to the function %s\n", yylineno, s->symbol);
+						}
+					}
 				}
 ;
 

@@ -41,9 +41,11 @@ typedef struct SymbolTable {
 
 void addProgramName(char* symbol);
 void addVariable(char* symbol, Type* type);
-void addProcedure(char* symbol, ParameterList* arguments);
-void addFunction(char* symbol, ParameterList* arguments, int return_type);
+int addProcedure(char* symbol, ParameterList* arguments, int linenum);
+int addFunction(char* symbol, ParameterList* arguments, int return_type, int linenum);
 void printSymbols();
+
+SymbolTable* isDeclared(char*);
 
 void printTree(Program*);
 void printIdentifierList(IdentifierList*);
