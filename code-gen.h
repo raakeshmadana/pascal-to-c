@@ -46,6 +46,7 @@ int addFunction(char* symbol, ParameterList* arguments, int return_type, int lin
 void printSymbols();
 
 SymbolTable* isDeclared(char*);
+int checkExpression(char*, Expression*, int);
 
 void printTree(Program*);
 void printIdentifierList(IdentifierList*);

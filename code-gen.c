@@ -55,7 +55,7 @@ int addProcedure(char* symbol, ParameterList* arguments, int linenum) {
 		return 1;
 	}
 
-	int error = 0;
+	int err = 0;
 
 	SymbolTable *s = (SymbolTable*)malloc(sizeof(SymbolTable));
 	s->symbol = symbol;
@@ -70,7 +70,7 @@ int addProcedure(char* symbol, ParameterList* arguments, int linenum) {
 			check = isDeclared(temp->identifier);
 			if (check) {
 				printf("%d: %s Re-declared\n", linenum, check->symbol);
-				error = 1;
+				err = 1;
 			} else {
 				addVariable(temp->identifier, arguments->type);
 			}
@@ -82,6 +82,8 @@ int addProcedure(char* symbol, ParameterList* arguments, int linenum) {
 	}
 	
 	HASH_ADD_KEYPTR(hh, symbols, s->symbol, strlen(s->symbol), s);
+
+	return err;
 }
 
 void addFunctionAttributes(Function* function, Type* type, int return_type) {
@@ -107,7 +109,7 @@ int addFunction(char* symbol, ParameterList* arguments, int return_type, int lin
 		return 1;
 	}
 
-	int error = 0;
+	int err = 0;
 
 	SymbolTable *s = (SymbolTable*)malloc(sizeof(SymbolTable));
 	s->symbol = symbol;
@@ -122,7 +124,7 @@ int addFunction(char* symbol, ParameterList* arguments, int return_type, int lin
 			check = isDeclared(temp->identifier);
 			if (check) {
 				printf("%d: %s Re-declared\n", linenum, check->symbol);
-				error = 1;
+				err = 1;
 			} else {
 				addVariable(temp->identifier, arguments->type);
 			}
@@ -134,12 +136,44 @@ int addFunction(char* symbol, ParameterList* arguments, int return_type, int lin
 	}
 	
 	HASH_ADD_KEYPTR(hh, symbols, s->symbol, strlen(s->symbol), s);
+
+	return err;
 }
 
 SymbolTable* isDeclared(char* identifier) {
 	SymbolTable* s = NULL;
 	HASH_FIND_STR(symbols, identifier, s);
 	return s;
+}
+
+int checkExpression(char* identifier, Expression* expression, int linenum) {
+	int err = 0;
+
+	if (expression->node_type == 0) {
+		SimpleExpression* simple_expression = expression->expression.simple_expression;
+		if(simple_expression->node_type == 0) {
+			Term* term = simple_expression->simple_expression.term;
+			if (term->node_type == 0) {
+				Factor* factor = term->term.factor;
+				if (factor->node_type == 2) {
+					SymbolTable* s = NULL;
+					HASH_FIND_STR(symbols, identifier, s);
+					int start_index = s->attributes.array->start_index;
+					int end_index = s->attributes.array->end_index;
+					int index = factor->factor.integer;
+					if (index < start_index || index > end_index) {
+						printf("%d: Array index out of bounds\n", linenum);
+						err = 1;
+					}
+				} else if (factor->node_type == 3) {
+					printf("%d: Array index cannot be real number\n", linenum); 
+					err = 1;
+				}
+			}
+		}
+	}
+
+	return err;
 }
 
 void printSymbols() {
@@ -497,9 +531,17 @@ void printStatement(Statement* statement, FILE* file) {
 
 void printAssignment(Assignment* assignment, FILE* file) {
 	//printf("Assignment\n");
+	SymbolTable* s = NULL;
+	HASH_FIND_STR(symbols, assignment->variable->variable.identifier, s);
+	if (s) {
+		if (s->type == kFunction) {
+			fprintf(file, "return ");
+		} else {
+			printVariable(assignment->variable, file);
+			fprintf(file, " = ");
+		}
+	}
 
-	printVariable(assignment->variable, file);
-	fprintf(file, " = ");
 	printExpression(assignment->expression, file);
 	fprintf(file, ";\n");
 }
@@ -625,13 +667,34 @@ void printVariable(Variable* variable, FILE* file) {
 	}
 }
 
-void printVariableExpression(VariableExpression* expression, FILE* file) {
+void printVariableExpression(VariableExpression* variable_expression, FILE* file) {
 	//printf("VariableExpression\n");
 	//printf("%s\n", expression->identifier);
 
-	fprintf(file, "%s[", expression->identifier);
-	printExpression(expression->expression, file);
-	fprintf(file, "] ");
+	fprintf(file, "%s[", variable_expression->identifier);
+	int printed = 0;
+	if (variable_expression->expression->node_type == 0) {
+		SimpleExpression* simple_expression = variable_expression->expression->expression.simple_expression;
+		if(simple_expression->node_type == 0) {
+			Term* term = simple_expression->simple_expression.term;
+			if (term->node_type == 0) {
+				Factor* factor = term->term.factor;
+				if (factor->node_type == 2) {
+					SymbolTable* s = NULL;
+					HASH_FIND_STR(symbols, variable_expression->identifier, s);
+					int index = factor->factor.integer - s->attributes.array->start_index;
+					fprintf(file, "%d", index);
+					printed = 1;
+				}
+			}
+		}
+	}
+
+	if (!printed) {
+		printExpression(variable_expression->expression, file);
+	}
+
+	fprintf(file, "]");
 }
 
 void printProcStatement(ProcStatement* proc_statement, FILE* file) {

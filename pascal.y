@@ -97,7 +97,8 @@ program: PROGRAM IDENTIFIER SEMICOLON declarations subdeclarations compoundstate
 			$$ = program;
 
 			addProgramName($2);
-			if (!error) {
+
+			if (error == 0) {
 				printSymbols();
 				printTree(program);
 			}
@@ -200,7 +201,8 @@ subprogramhead: FUNCTION IDENTIFIER arguments COLON standardtype SEMICOLON {
 						subprogram_head->subprogram_head.function_rule->standard_type = $5;
 						$$ = subprogram_head;
 						
-						error = addFunction($2, $3, $5, yylineno);
+						int err = addFunction($2, $3, $5, yylineno);
+						error = error ? error : err;
 					}
 			  | PROCEDURE IDENTIFIER arguments SEMICOLON {
 						SubprogramHead* subprogram_head = (SubprogramHead*)malloc(sizeof(SubprogramHead));
@@ -210,7 +212,8 @@ subprogramhead: FUNCTION IDENTIFIER arguments COLON standardtype SEMICOLON {
 						subprogram_head->subprogram_head.procedure_rule->arguments = $3;
 						$$ = subprogram_head;
 
-						error = addProcedure($2, $3, yylineno);
+						int err = addProcedure($2, $3, yylineno);
+						error = error ? error : err;
 					}
 ;
 
@@ -371,6 +374,9 @@ variable: IDENTIFIER {
 					error = 1;
 				} else if (s->type != kArray) {
 					printf("%d: %s is not an array\n", yylineno, $1);
+				} else {
+					int err = checkExpression($1, $3, yylineno);
+					error = error ? error: err;
 				}
 			}
 ;
@@ -401,10 +407,12 @@ procstatement: IDENTIFIER {
 					if (s == NULL) {
 						printf("%d: Undeclared function %s\n", yylineno, $1);
 						error = 1;
-					} else if (s->type != kFunction) {
-						printf("%d: %s is not a function\n", yylineno, $1);
+					} else if (s->type != kFunction && s->type != kProcedure) {
+						printf("%d: %s is not a function or a procedure\n", yylineno, $1);
 						error = 1;
 					} else {
+						char* type = s->type == kFunction ? "function" : "procedure";
+
 						ExpressionList* temp = $3;
 						int num_arguments = 0;
 						while (temp != NULL) {
@@ -413,9 +421,9 @@ procstatement: IDENTIFIER {
 						}
 
 						if(utarray_len(s->attributes.function->arguments_type) < num_arguments) {
-							printf("%d: Too few parameters in call to the function %s\n", yylineno, s->symbol);
+							printf("%d: Too few parameters in call to the %s %s\n", yylineno, type, s->symbol);
 						} else if(utarray_len(s->attributes.function->arguments_type) > num_arguments) {
-							printf("%d: Too many parameters in call to the function %s\n", yylineno, s->symbol);
+							printf("%d: Too many parameters in call to the %s %s\n", yylineno, type, s->symbol);
 						}
 					}
 				}
