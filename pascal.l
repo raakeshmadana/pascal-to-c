@@ -8,8 +8,9 @@
 %}
 
 %option noyywrap
+%option yylineno
 
-delim			[ \t\n\r]
+delim			[ \t\r]
 ws				{delim}+
 letter			[A-Za-z]
 digit			[0-9]
@@ -64,6 +65,7 @@ integer			{digit}+
 ")"				{ return RPAREN; }
 "["				{ return LSQUARE; }
 "]"				{ return RSQUARE; }
+"\n"			{ }
 {ws}			// Ignore whitespace
 {identifier}	{
 					yylval.identifier = (char*)malloc(sizeof(yytext));
